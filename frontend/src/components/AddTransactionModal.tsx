@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import type { NewTransactionInput } from "../types/transaction";
+import { formatCurrency } from "../utils/currency";
 import "./AddTransactionModal.css";
 
 interface AddTransactionModalProps {
@@ -232,6 +233,10 @@ export default function AddTransactionModal({ onClose, onSubmit }: AddTransactio
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // "edit" = the form; "review" = a read-only summary the user confirms
+  // before anything is sent to the server.
+  const [step, setStep] = useState<"edit" | "review">("edit");
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const headingId = useId();
   const errorIdPrefix = useId();
   const datePickerRef = useRef<HTMLInputElement>(null);
@@ -263,15 +268,25 @@ export default function AddTransactionModal({ onClose, onSubmit }: AddTransactio
 
   // Escape closes the modal, same as Cancel — and, like Cancel, not while a
   // submit is in flight.
+  // Escape steps back from the review to the form, or closes from the form
+  // (same as Cancel) — never while a submit is in flight.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !submitting) {
+      if (event.key !== "Escape" || submitting) return;
+      if (step === "review") {
+        setStep("edit");
+      } else {
         onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, submitting]);
+  }, [onClose, submitting, step]);
+
+  // Land keyboard focus on the confirm button when the review appears.
+  useEffect(() => {
+    if (step === "review") confirmButtonRef.current?.focus();
+  }, [step]);
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((previous) => ({ ...previous, [field]: value }));
@@ -293,6 +308,11 @@ export default function AddTransactionModal({ onClose, onSubmit }: AddTransactio
       return;
     }
 
+    setSubmitError(null);
+    setStep("review");
+  }
+
+  async function handleConfirm() {
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -337,125 +357,175 @@ export default function AddTransactionModal({ onClose, onSubmit }: AddTransactio
         aria-labelledby={headingId}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id={headingId}>Add Transaction</h2>
+        <h2 id={headingId}>{step === "review" ? "Confirm transaction" : "Add Transaction"}</h2>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <label className="modal-field">
-            Transaction Date
-            <div className="modal-date-group">
+        {step === "review" ? (
+          <div className="modal-review">
+            <p className="modal-review-intro">
+              Please review the details below. Once recorded, a transaction can't be edited, and its status is
+              assigned automatically.
+            </p>
+            <dl className="modal-review-list">
+              <div>
+                <dt>Transaction date</dt>
+                <dd>{form.transactionDate}</dd>
+              </div>
+              <div>
+                <dt>Account number</dt>
+                <dd>{form.accountNumber}</dd>
+              </div>
+              <div>
+                <dt>Account holder</dt>
+                <dd>{form.accountHolderName.trim()}</dd>
+              </div>
+              <div>
+                <dt>Amount</dt>
+                <dd className="modal-review-amount">{formatCurrency(parseAmount(form.amount))}</dd>
+              </div>
+            </dl>
+
+            {submitError && (
+              <p className="modal-error" role="alert">
+                {submitError}
+              </p>
+            )}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => {
+                  setSubmitError(null);
+                  setStep("edit");
+                }}
+                disabled={submitting}
+              >
+                Back to edit
+              </button>
+              <button
+                ref={confirmButtonRef}
+                type="button"
+                className="button button--primary"
+                onClick={handleConfirm}
+                disabled={submitting}
+              >
+                {submitting ? "Recording..." : "Confirm and record"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} noValidate>
+            <label className="modal-field">
+              Transaction Date
+              <div className="modal-date-group">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={form.transactionDate}
+                  onChange={(event) => updateField("transactionDate", formatDateInput(event.target.value))}
+                  placeholder="YYYY-MM-DD"
+                  {...fieldProps("transactionDate")}
+                />
+                <button
+                  type="button"
+                  className="modal-date-trigger"
+                  onClick={openCalendar}
+                  aria-label="Choose date from calendar"
+                  title="Choose date from calendar"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="2" y="3" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+                    <path d="M2 6.5h12M5.5 1.75v2.5M10.5 1.75v2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                </button>
+                <input
+                  ref={datePickerRef}
+                  type="date"
+                  className="modal-date-picker"
+                  value={isValidIsoDate(form.transactionDate) ? form.transactionDate : ""}
+                  max={localToday()}
+                  onChange={(event) => updateField("transactionDate", event.target.value)}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+              </div>
+              {renderFieldError("transactionDate")}
+            </label>
+
+            <label className="modal-field">
+              Account Number
               <input
                 type="text"
                 inputMode="numeric"
-                maxLength={10}
-                value={form.transactionDate}
-                onChange={(event) => updateField("transactionDate", formatDateInput(event.target.value))}
-                placeholder="YYYY-MM-DD"
-                {...fieldProps("transactionDate")}
+                value={form.accountNumber}
+                onChange={(event) => updateField("accountNumber", formatAccountNumber(event.target.value))}
+                placeholder="e.g. 1234-5678-9012"
+                {...fieldProps("accountNumber")}
               />
-              <button
-                type="button"
-                className="modal-date-trigger"
-                onClick={openCalendar}
-                aria-label="Choose date from calendar"
-                title="Choose date from calendar"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                  <rect x="2" y="3" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
-                  <path d="M2 6.5h12M5.5 1.75v2.5M10.5 1.75v2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
-              </button>
+              {renderFieldError("accountNumber")}
+            </label>
+
+            <label className="modal-field">
+              Account Holder Name
               <input
-                ref={datePickerRef}
-                type="date"
-                className="modal-date-picker"
-                value={isValidIsoDate(form.transactionDate) ? form.transactionDate : ""}
-                max={localToday()}
-                onChange={(event) => updateField("transactionDate", event.target.value)}
-                tabIndex={-1}
-                aria-hidden="true"
-              />
-            </div>
-            {renderFieldError("transactionDate")}
-          </label>
-
-          <label className="modal-field">
-            Account Number
-            <input
-              type="text"
-              inputMode="numeric"
-              value={form.accountNumber}
-              onChange={(event) => updateField("accountNumber", formatAccountNumber(event.target.value))}
-              placeholder="e.g. 1234-5678-9012"
-              {...fieldProps("accountNumber")}
-            />
-            {renderFieldError("accountNumber")}
-          </label>
-
-          <label className="modal-field">
-            Account Holder Name
-            <input
-              type="text"
-              value={form.accountHolderName}
-              onChange={(event) => updateField("accountHolderName", sanitizeAccountHolderName(event.target.value))}
-              placeholder="e.g. Jane Doe"
-              {...fieldProps("accountHolderName")}
-            />
-            {renderFieldError("accountHolderName")}
-          </label>
-
-          <label className="modal-field">
-            Amount
-            <div className="modal-input-prefix-group">
-              <span className="modal-input-prefix" aria-hidden="true">
-                $
-              </span>
-              {/* Text rather than type="number": number inputs don't expose
-                  the cursor position, which the live ".00" mask needs.
-                  inputMode="decimal" still brings up a numeric keypad. */}
-              <input
-                ref={amountInputRef}
                 type="text"
-                inputMode="decimal"
-                value={form.amount}
-                onChange={(event) => {
-                  const { inputType } = event.nativeEvent as InputEvent;
-                  const deletion =
-                    inputType === "deleteContentBackward"
-                      ? "backward"
-                      : inputType === "deleteContentForward"
-                        ? "forward"
-                        : null;
-                  const { value, caret } = maskAmount(
-                    event.target.value,
-                    event.target.selectionStart ?? event.target.value.length,
-                    form.amount,
-                    deletion,
-                  );
-                  pendingAmountCaret.current = caret;
-                  updateField("amount", value);
-                }}
-                placeholder="0.00"
-                {...fieldProps("amount")}
+                value={form.accountHolderName}
+                onChange={(event) => updateField("accountHolderName", sanitizeAccountHolderName(event.target.value))}
+                placeholder="e.g. Jane Doe"
+                {...fieldProps("accountHolderName")}
               />
+              {renderFieldError("accountHolderName")}
+            </label>
+
+            <label className="modal-field">
+              Amount
+              <div className="modal-input-prefix-group">
+                <span className="modal-input-prefix" aria-hidden="true">
+                  $
+                </span>
+                {/* Text rather than type="number": number inputs don't expose
+                    the cursor position, which the live ".00" mask needs.
+                    inputMode="decimal" still brings up a numeric keypad. */}
+                <input
+                  ref={amountInputRef}
+                  type="text"
+                  inputMode="decimal"
+                  value={form.amount}
+                  onChange={(event) => {
+                    const { inputType } = event.nativeEvent as InputEvent;
+                    const deletion =
+                      inputType === "deleteContentBackward"
+                        ? "backward"
+                        : inputType === "deleteContentForward"
+                          ? "forward"
+                          : null;
+                    const { value, caret } = maskAmount(
+                      event.target.value,
+                      event.target.selectionStart ?? event.target.value.length,
+                      form.amount,
+                      deletion,
+                    );
+                    pendingAmountCaret.current = caret;
+                    updateField("amount", value);
+                  }}
+                  placeholder="0.00"
+                  {...fieldProps("amount")}
+                />
+              </div>
+              {renderFieldError("amount")}
+            </label>
+
+            <div className="modal-actions">
+              <button type="button" className="button button--secondary" onClick={onClose}>
+                Cancel
+              </button>
+              <button type="submit" className="button button--primary">
+                Add Transaction
+              </button>
             </div>
-            {renderFieldError("amount")}
-          </label>
-
-          {submitError && (
-            <p className="modal-error" role="alert">
-              {submitError}
-            </p>
-          )}
-
-          <div className="modal-actions">
-            <button type="button" className="button button--secondary" onClick={onClose} disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="button button--primary" disabled={submitting}>
-              {submitting ? "Adding..." : "Add Transaction"}
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

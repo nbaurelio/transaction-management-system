@@ -1,38 +1,103 @@
+/* Brand gradient (from the First Circle banner artwork): bright teal on the
+   left fading into deep teal by the middle, then dark to the right edge.
+   Everything sits on one centre line. */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(100deg, #00a3a6 0%, #037178 22%, #024550 45%, #023642 62%, #02343f 100%);
+  color: #fff;
 }
 
 .app-header-inner {
+  position: relative; /* anchors the overhanging logo badge */
   max-width: 1040px;
+  height: 60px;
   margin: 0 auto;
-  padding: 0.9rem 1.5rem;
+  padding: 0 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
+}
+
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  /* Room for the absolutely positioned logo badge (76px) plus a gap. */
+  padding-left: calc(76px + 0.85rem);
+}
+
+/* Logo badge: a 76px white circle set low in the bar, so about two-thirds
+   sits in the teal and the rest (26px) hangs over the page. Kept out of the
+   flex flow (absolute), so the bar's height and the title's centring are
+   unaffected; the brand's left padding makes room for it instead. */
+.app-header-badge {
+  position: absolute;
+  left: 1.5rem;
+  bottom: -26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(2, 52, 63, 0.25);
+}
+
+.app-header-mark {
+  display: block;
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+
+/* Title over a smaller, softer "First Circle" line. */
+.app-header-titles {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
 }
 
 .app-header-title {
-  font-weight: 600;
+  font-family: var(--font-heading);
   font-size: 1rem;
-  color: var(--text);
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.005em;
   white-space: nowrap;
 }
 
-/* Same border, radius and height as the page's other inputs and the
-   rows-per-page dropdown, with the icon tucked inside on the left. */
+.app-header-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+}
+
+.app-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* See-through on the teal bar; turns solid white while typing so the query
+   reads like any other input on the page. */
 .app-header-search {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 320px;
-  color: var(--text-muted);
+  max-width: 300px;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .app-header-search svg {
@@ -43,36 +108,87 @@
 
 .app-header-search input {
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   width: 100%;
-  padding: 0.45rem 0.75rem 0.45rem 2.1rem;
-  border: 1px solid var(--border);
+  height: 2.25rem;
+  padding: 0 0.75rem 0 2.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius);
-  background: var(--surface-muted);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .app-header-search input::placeholder {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.app-header-search input:hover {
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .app-header-search input:focus {
   outline: none;
-  border-color: var(--accent);
-  background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(11, 110, 119, 0.15);
+  background: #fff;
+  border-color: #fff;
+  color: var(--text);
+  box-shadow: 0 0 0 3px rgba(95, 195, 201, 0.4);
+}
+
+.app-header-search input:focus::placeholder {
+  color: var(--text-muted);
 }
 
 .app-header-search:focus-within {
   color: var(--accent);
 }
 
-/* On phones the search drops onto its own full-width row under the title. */
+/* Replace Chrome's blue clear "×": light on the teal bar, grey once the
+   box turns white while typing. */
+.app-header-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8M10 2l-8 8' stroke='%23ffffff' stroke-opacity='0.75' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+.app-header-search input:focus::-webkit-search-cancel-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8M10 2l-8 8' stroke='%235f6b75' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* On phones the search drops onto its own full-width row under the brand. */
 @media (max-width: 640px) {
   .app-header-inner {
+    height: auto;
     flex-wrap: wrap;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1.5rem;
+    gap: 0.65rem;
+  }
+
+  /* The search sits on a second row here, so an overhang would cover it:
+     the badge goes back inline, smaller, fully inside the header. */
+  .app-header-brand {
+    padding-left: 0;
     gap: 0.6rem;
+  }
+
+  .app-header-badge {
+    position: static;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .app-header-mark {
+    width: 26px;
+    height: 26px;
+  }
+
+  .app-header-tools {
+    flex-basis: 100%;
   }
 
   .app-header-search {

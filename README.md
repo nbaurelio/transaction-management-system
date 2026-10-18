@@ -319,7 +319,7 @@ Search, filtering, sorting and pagination compose together (e.g. search "john", 
 
 1. With both servers running, open `http://localhost:5173` in your browser.
 2. Confirm the table shows the 12 pre-loaded sample transactions, with status badges colored yellow (Pending), green (Settled), or red (Failed).
-3. Click **Add Transaction**, fill in the form, and submit.
+3. Click **Add Transaction**, fill in the form, and click **Add Transaction** again. Review the summary that appears and click **Confirm and record** (or **Back to edit** to change something).
 4. Confirm the new row appears at the bottom of the table with a randomly assigned status.
 5. Refresh the page — the new transaction should still be there (it's now saved in `backend/data/transactions.csv`).
 6. Open `backend/data/transactions.csv` in a text editor to confirm the row was actually appended to the file.

@@ -19,6 +19,7 @@
 }
 
 .modal h2 {
+  font-family: var(--font-heading);
   margin: 0 0 1.25rem;
   font-size: 1.15rem;
   font-weight: 600;
@@ -59,7 +60,6 @@
 .modal-date-group input[type="text"] {
   width: 100%;
   padding-right: 2.5rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .modal-date-trigger {
@@ -132,6 +132,46 @@
   font-size: 0.85rem;
   font-weight: 500;
   margin: 0 0 1rem;
+}
+
+/* Review step: a read-only summary of what's about to be recorded. */
+.modal-review-intro {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.modal-review-list {
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.modal-review-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.modal-review-list > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.modal-review-list dt {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.modal-review-list dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.modal-review-amount {
+  font-variant-numeric: tabular-nums;
 }
 
 .modal-actions {

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createTransaction, fetchTransactions } from "./api/transactions";
 import AddTransactionModal from "./components/AddTransactionModal";
 import AppHeader from "./components/AppHeader";
+import TableSkeleton from "./components/TableSkeleton";
+import TableToolbar from "./components/TableToolbar";
 import TransactionRecordedPopup from "./components/TransactionRecordedPopup";
 import TransactionTable from "./components/TransactionTable";
 import type { NewTransactionInput, Transaction } from "./types/transaction";
@@ -49,26 +51,20 @@ export default function App() {
     );
   }
 
+  const addButton = (
+    <button className="button button--primary" onClick={() => setIsModalOpen(true)}>
+      Add Transaction
+    </button>
+  );
+
   return (
     <div className="app">
       <AppHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <section className="hero">
-        <div className="hero-inner">
-          <h1>Transactions</h1>
-          <p className="hero-subtitle">
-            {!loading && !loadError
-              ? `${transactions.length} transaction${transactions.length === 1 ? "" : "s"} on record`
-              : "Track and record account transactions"}
-          </p>
-          <button className="button button--hero" onClick={() => setIsModalOpen(true)}>
-            Add Transaction
-          </button>
-        </div>
-      </section>
-
       <main className="page">
-        {loading && <p className="page-status">Loading transactions...</p>}
+        {(loading || loadError) && <TableToolbar heading="All transactions" actions={addButton} />}
+
+        {loading && <TableSkeleton />}
 
         {!loading && loadError && (
           <div className="load-error">
@@ -79,7 +75,9 @@ export default function App() {
           </div>
         )}
 
-        {!loading && !loadError && <TransactionTable transactions={transactions} searchQuery={searchQuery} />}
+        {!loading && !loadError && (
+          <TransactionTable transactions={transactions} searchQuery={searchQuery} actions={addButton} />
+        )}
       </main>
 
       {isModalOpen && (

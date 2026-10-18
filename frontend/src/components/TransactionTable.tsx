@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { STATUS_FILTERS, type StatusFilter, type Transaction } from "../types/transaction";
 import { formatCurrency } from "../utils/currency";
 import StatusBadge from "./StatusBadge";
+import TableToolbar from "./TableToolbar";
 import "./TransactionTable.css";
 
 type SortField = "transactionDate" | "amount";
@@ -22,18 +23,103 @@ function matchesSearch(transaction: Transaction, query: string): boolean {
   return queryDigits !== "" && transaction.accountNumber.replace(/-/g, "").includes(queryDigits);
 }
 
+type Range = [start: number, end: number];
+
+/** Every non-overlapping occurrence of `needle` in `haystack`, as [start, end) ranges. */
+function findOccurrences(haystack: string, needle: string): Range[] {
+  const ranges: Range[] = [];
+  if (!needle) return ranges;
+  let from = 0;
+  let index: number;
+  while ((index = haystack.indexOf(needle, from)) !== -1) {
+    ranges.push([index, index + needle.length]);
+    from = index + needle.length;
+  }
+  return ranges;
+}
+
+/** Where the search matches a name — case-insensitive, same rule as matchesSearch. */
+function nameMatchRanges(name: string, query: string): Range[] {
+  return findOccurrences(name.toLowerCase(), query.trim().toLowerCase());
+}
+
+/**
+ * Where the search matches an account number. Matching ignores hyphens
+ * (as in matchesSearch), so the search runs on the digits alone and each hit
+ * is mapped back onto the formatted number — a range can span a hyphen, e.g.
+ * "11223456" highlights "1122-3456" in "1122-3456-7890".
+ */
+function accountMatchRanges(accountNumber: string, query: string): Range[] {
+  const queryDigits = query.trim().toLowerCase().replace(/-/g, "");
+  const positions: number[] = []; // index in accountNumber of each non-hyphen char
+  let stripped = "";
+  for (let i = 0; i < accountNumber.length; i++) {
+    if (accountNumber[i] !== "-") {
+      positions.push(i);
+      stripped += accountNumber[i];
+    }
+  }
+  return findOccurrences(stripped, queryDigits).map(([start, end]) => [positions[start], positions[end - 1] + 1]);
+}
+
+/** Renders `text` with each range wrapped in a <mark>. */
+function highlight(text: string, ranges: Range[]) {
+  if (ranges.length === 0) return text;
+  const parts = [];
+  let cursor = 0;
+  for (const [start, end] of ranges) {
+    if (start > cursor) parts.push(text.slice(cursor, start));
+    parts.push(
+      <mark key={start} className="search-highlight">
+        {text.slice(start, end)}
+      </mark>,
+    );
+    cursor = end;
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return parts;
+}
+
 interface TransactionTableProps {
   transactions: Transaction[];
   searchQuery: string;
+  /** Shown at the right of the toolbar above the table (the Add Transaction button). */
+  actions?: ReactNode;
 }
 
-export default function TransactionTable({ transactions, searchQuery }: TransactionTableProps) {
+export default function TransactionTable({ transactions, searchQuery, actions }: TransactionTableProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const filterPopoverRef = useRef<HTMLDetailsElement>(null);
+  const pageSizePopoverRef = useRef<HTMLDetailsElement>(null);
+
+  // <details> menus only close when their own summary is clicked. Close them
+  // on a click anywhere else, or on Escape, like a typical dropdown.
+  useEffect(() => {
+    const popovers = [filterPopoverRef, pageSizePopoverRef];
+    function closeAll(except?: Node) {
+      for (const ref of popovers) {
+        if (ref.current?.open && !(except && ref.current.contains(except))) {
+          ref.current.open = false;
+        }
+      }
+    }
+    function handlePointerDown(event: PointerEvent) {
+      closeAll(event.target as Node);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeAll();
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // The search box lives in the header, outside this component, so a new
   // query is noticed here and sends the table back to page 1 — the same as
@@ -46,7 +132,12 @@ export default function TransactionTable({ transactions, searchQuery }: Transact
   }
 
   if (transactions.length === 0) {
-    return <p className="transaction-table-empty">No transactions yet. Add one to get started.</p>;
+    return (
+      <div className="transaction-table-wrapper">
+        <TableToolbar heading="All transactions" meta="0 on record" actions={actions} />
+        <p className="transaction-table-empty">No transactions yet. Add one to get started.</p>
+      </div>
+    );
   }
 
   // Pipeline: search -> filter by status -> sort -> slice to the current page.
@@ -109,16 +200,15 @@ export default function TransactionTable({ transactions, searchQuery }: Transact
 
   return (
     <div className="transaction-table-wrapper">
-      <div className="section-heading-row">
-        <h2 className="section-heading">
-          {statusFilter === "All" ? "All transactions" : `${statusFilter} transactions`}
-        </h2>
-        {trimmedQuery && (
-          <span className="section-heading-meta">
-            {sorted.length} result{sorted.length === 1 ? "" : "s"} for “{trimmedQuery}”
-          </span>
-        )}
-      </div>
+      <TableToolbar
+        heading={statusFilter === "All" ? "All transactions" : `${statusFilter} transactions`}
+        meta={
+          trimmedQuery
+            ? `${sorted.length} result${sorted.length === 1 ? "" : "s"} for “${trimmedQuery}”`
+            : `${sorted.length} on record`
+        }
+        actions={actions}
+      />
 
       <div className="transaction-table-scroll">
         <table className="transaction-table">
@@ -136,7 +226,7 @@ export default function TransactionTable({ transactions, searchQuery }: Transact
                   Amount {sortIndicator("amount")}
                 </button>
               </th>
-              <th>
+              <th className="transaction-table-status">
                 <div className="status-column-header">
                   <span>Status</span>
                   <details className="status-filter-popover" ref={filterPopoverRef}>
@@ -197,10 +287,12 @@ export default function TransactionTable({ transactions, searchQuery }: Transact
                 return (
                   <tr key={`${transaction.accountNumber}-${transaction.transactionDate}-${globalIndex}`}>
                     <td>{transaction.transactionDate}</td>
-                    <td>{transaction.accountNumber}</td>
-                    <td>{transaction.accountHolderName}</td>
-                    <td className="transaction-table-amount">{formatCurrency(transaction.amount)}</td>
+                    <td>{highlight(transaction.accountNumber, accountMatchRanges(transaction.accountNumber, searchQuery))}</td>
                     <td>
+                      {highlight(transaction.accountHolderName, nameMatchRanges(transaction.accountHolderName, searchQuery))}
+                    </td>
+                    <td className="transaction-table-amount">{formatCurrency(transaction.amount)}</td>
+                    <td className="transaction-table-status">
                       <StatusBadge status={transaction.status} />
                     </td>
                   </tr>
@@ -216,22 +308,40 @@ export default function TransactionTable({ transactions, searchQuery }: Transact
           dropdown needed to switch back to a smaller one. */}
       {sorted.length > 0 && (
         <div className="table-pagination">
-          <label className="table-page-size">
-            Rows per page
-            <select
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* A custom menu rather than a native <select>, whose open list
+              can't be styled — this reuses the Status filter's menu styles
+              so the two dropdowns match. */}
+          <div className="table-page-size">
+            <span>Rows per page</span>
+            <details className="page-size-popover" ref={pageSizePopoverRef}>
+              <summary aria-label={`Rows per page: ${pageSize}`}>
+                {pageSize}
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                  <path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </summary>
+              <div className="status-filter-menu page-size-menu" role="menu">
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={pageSize === size}
+                    className={`status-filter-option${pageSize === size ? " status-filter-option--active" : ""}`}
+                    onClick={() => {
+                      setPageSize(size);
+                      setCurrentPage(1);
+                      if (pageSizePopoverRef.current) {
+                        pageSizePopoverRef.current.open = false;
+                      }
+                    }}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </details>
+          </div>
 
           {totalPages > 1 && (
             <div className="table-pagination-nav">

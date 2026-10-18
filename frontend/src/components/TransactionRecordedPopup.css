@@ -12,8 +12,6 @@
 .recorded-popup {
   background: var(--surface);
   border-radius: 6px;
-  /* Thin green rule on top signals success without a decorative icon. */
-  border-top: 3px solid #1b6b32;
   padding: 1.5rem;
   width: 100%;
   max-width: 400px;
@@ -21,6 +19,7 @@
 }
 
 .recorded-popup h2 {
+  font-family: var(--font-heading);
   margin: 0 0 0.5rem;
   font-size: 1.15rem;
   font-weight: 600;

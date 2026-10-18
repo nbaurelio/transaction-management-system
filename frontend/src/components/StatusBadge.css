@@ -1,30 +1,28 @@
-/* Squared label with a thin border rather than a soft pill — reads as a
-   status field, not a tag. Colors stay on the spec's yellow/green/red. */
+/* Status pill: fully rounded, a soft tint of the status colour and no
+   border. Colours follow the spec (Pending yellow, Settled green, Failed
+   red), but in muted, earthy shades — sage, ochre and brick — rather than
+   the bright default palette, so they sit calmly in a finance table. */
 .status-badge {
   display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  font-size: 0.78rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  line-height: 1.25;
   white-space: nowrap;
 }
 
-.status-badge--pending {
-  background-color: #fdf6dc;
-  border-color: #ecd98a;
-  color: #7a5c00;
+.status-badge--settled {
+  background: #e4ede4;
+  color: #2f5e3b;
 }
 
-.status-badge--settled {
-  background-color: #e6f4ea;
-  border-color: #a9d5b5;
-  color: #1b6b32;
+.status-badge--pending {
+  background: #f4ecd2;
+  color: #7a5916;
 }
 
 .status-badge--failed {
-  background-color: #fbeaea;
-  border-color: #eab3ae;
-  color: #a12a20;
+  background: #f3e1dd;
+  color: #9a3b2f;
 }

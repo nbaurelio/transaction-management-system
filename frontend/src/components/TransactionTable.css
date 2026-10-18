@@ -4,25 +4,41 @@
   gap: 1rem;
 }
 
-.section-heading-row {
+/* Toolbar directly above the table: heading + record count on the left,
+   Add Transaction on the right (see TableToolbar.tsx). */
+.table-toolbar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-top: 2rem;
+  /* Extra room on top: the header's logo badge hangs ~26px over the page. */
+  margin-top: 2.75rem;
+}
+
+.table-toolbar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .section-heading {
+  font-family: var(--font-heading);
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.35rem;
   font-weight: 600;
+  letter-spacing: -0.015em; /* Inter is tuned to tighten slightly at larger sizes */
   color: var(--text);
 }
 
+/* Separated from the heading by a thin rule rather than punctuation. */
 .section-heading-meta {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+  white-space: nowrap;
 }
 
 .transaction-table-scroll {
@@ -102,14 +118,64 @@
   color: var(--text-muted);
 }
 
-.table-page-size select {
-  font: inherit;
-  padding: 0.55rem 0.75rem;
+.page-size-popover {
+  position: relative;
+  display: inline-flex;
+}
+
+/* The closed control: looks like the page's other inputs, with a chevron. */
+.page-size-popover summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 2.25rem;
+  padding: 0 0.7rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
+  user-select: none;
+}
+
+.page-size-popover summary::-webkit-details-marker {
+  display: none;
+}
+
+.page-size-popover summary:hover {
+  border-color: #c5cfd3;
+}
+
+.page-size-popover summary svg {
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+
+.page-size-popover[open] summary {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(11, 110, 119, 0.15);
+}
+
+.page-size-popover[open] summary svg {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+/* Same panel and options as the Status filter (.status-filter-menu /
+   .status-filter-option); only the placement differs. It opens upward and
+   left-aligned, since it sits at the very bottom of the page. */
+.status-filter-menu.page-size-menu {
+  top: auto;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  right: auto;
+  min-width: 5.5rem;
+}
+
+.page-size-menu .status-filter-option {
+  font-variant-numeric: tabular-nums;
 }
 
 .transaction-table th,
@@ -131,6 +197,11 @@
   color: var(--text-muted);
 }
 
+/* Status column (heading + pills) is centred. */
+.transaction-table .transaction-table-status {
+  text-align: center;
+}
+
 .transaction-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -139,15 +210,21 @@
   background: var(--surface-hover);
 }
 
-/* Ledger convention: amounts right-aligned with fixed-width digits, so the
-   decimal points line up down the column. */
+/* Amount column (heading + values) is centred, with fixed-width digits so
+   figures of the same length still line up digit for digit. */
 .transaction-table .transaction-table-amount {
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
-.transaction-table td {
-  font-variant-numeric: tabular-nums;
+/* Search matches in the Name / Account Number cells. Teal tint rather than
+   a yellow highlighter, since yellow already means "Pending" in this table. */
+.search-highlight {
+  background: rgba(95, 195, 201, 0.32);
+  color: var(--accent-deep);
+  font-weight: 600;
+  border-radius: 2px;
+  padding: 0.05em 0;
 }
 
 .transaction-table-empty {
@@ -258,4 +335,11 @@
 
 .status-filter-option.status-filter-option--active .status-filter-option-count {
   color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 640px) {
+  /* No overhanging badge on phones (it sits inside the header there). */
+  .table-toolbar {
+    margin-top: 1.5rem;
+  }
 }

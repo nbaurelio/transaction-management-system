@@ -7,15 +7,22 @@
   --border: #dde3e6;
   --text: #17222b;
   --text-muted: #5f6b75;
-  /* Teal pulled from the hero banner image, so the page and banner read as one palette. */
+  /* Brand teal. */
   --accent: #0b6e77;
   --accent-hover: #085a62;
   --accent-deep: #02343f;
+  --accent-light: #5fc3c9;
   /* One corner radius everywhere keeps buttons, inputs, cards and badges consistent. */
   --radius: 4px;
 
   color-scheme: light;
-  font-family: "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Inter: designed for on-screen interfaces, with excellent fixed-width
+     figures, so amounts and account numbers line up down a column. One
+     family throughout; headings differ by size and weight only. */
+  --font-heading: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-body: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.5;
   color: var(--text);
@@ -33,4 +40,17 @@ body {
 
 button {
   cursor: pointer;
+}
+
+/* Hidden on screen but still read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
