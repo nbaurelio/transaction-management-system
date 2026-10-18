@@ -73,6 +73,19 @@ class TransactionServiceTest {
     }
 
     @Test
+    void addTransaction_keepsExtraDecimalPlacesWithoutRounding() throws Exception {
+        TransactionService service = newService();
+        TransactionRequest request = sampleRequest("4444-4444-4444", "Precise Amount");
+        request.setAmount(new BigDecimal("12.579"));
+
+        Transaction created = service.addTransaction(request);
+
+        assertThat(created.getAmount().toPlainString()).isEqualTo("12.579");
+        assertThat(Files.readString(tempDir.resolve("transactions.csv")))
+                .contains("4444-4444-4444,Precise Amount,12.579,");
+    }
+
+    @Test
     void addTransaction_appendsWithoutOverwritingExistingRows() {
         TransactionService service = newService();
         service.addTransaction(sampleRequest("1111-1111-1111", "First Person"));

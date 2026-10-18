@@ -230,7 +230,7 @@ Adds a new transaction. The server assigns `status` randomly (`Pending`, `Settle
 }
 ```
 
-**Validation errors:** `400 Bad Request` if a required field is missing, the amount is zero, negative or has more than 2 decimal places, the date is in the future, or the body is malformed, e.g.:
+**Validation errors:** `400 Bad Request` if a required field is missing, the amount is zero, negative or has more than 13 digits before the decimal point, the date is in the future, or the body is malformed, e.g.:
 
 ```json
 {
@@ -345,7 +345,7 @@ cd backend
 mvn test
 ```
 
-17 tests total: CSV read/write behavior, the concurrent-write safety test described in [Data Integrity](#data-integrity-acid-on-a-csv-file), and controller-level validation tests for every rejected payload shape.
+19 tests total: CSV read/write behavior, the concurrent-write safety test described in [Data Integrity](#data-integrity-acid-on-a-csv-file), and controller-level validation tests for every rejected payload shape.
 
 ---
 

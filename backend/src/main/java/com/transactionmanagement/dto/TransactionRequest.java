@@ -46,7 +46,9 @@ public class TransactionRequest {
 
     @NotNull(message = "amount is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "amount must be greater than zero")
-    @Digits(integer = 13, fraction = 2, message = "amount must have at most 2 decimal places")
+    // Caps the whole-number part only (same 13-digit limit as the form);
+    // any number of decimal places is allowed.
+    @Digits(integer = 13, fraction = Integer.MAX_VALUE, message = "amount must have at most 13 digits before the decimal point")
     private BigDecimal amount;
 
     public LocalDate getTransactionDate() {

@@ -68,10 +68,21 @@ class TransactionControllerValidationTest {
     }
 
     @Test
-    void rejectsAmountWithMoreThanTwoDecimals() throws Exception {
+    void rejectsAmountWithTooManyWholeDigits() throws Exception {
+        performPost("""
+                {"transactionDate":"2025-03-15","accountNumber":"1234-5678-9012","accountHolderName":"Jane Doe","amount":12345678901234.00}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void acceptsAmountWithMoreThanTwoDecimals() throws Exception {
+        when(transactionService.addTransaction(any())).thenReturn(new Transaction(
+                LocalDate.of(2025, 3, 15), "1234-5678-9012", "Jane Doe",
+                new BigDecimal("10.999"), TransactionStatus.PENDING));
+
         performPost("""
                 {"transactionDate":"2025-03-15","accountNumber":"1234-5678-9012","accountHolderName":"Jane Doe","amount":10.999}
-                """).andExpect(status().isBadRequest());
+                """).andExpect(status().isCreated());
     }
 
     @Test

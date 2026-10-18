@@ -52,19 +52,64 @@ const MAX_AMOUNT_WHOLE_DIGITS = 13;
 
 const digitsOnly = (text: string) => text.replace(/\D/g, "");
 
+/** "1234567" -> "1,234,567". Only ever applied to the whole-number part. */
+const groupThousands = (wholeDigits: string) => wholeDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+/** The display value without its thousands separators, ready for Number(). */
+const parseAmount = (value: string) => Number(value.replace(/,/g, ""));
+
+/** Index in `grouped` just after its `count`-th digit (commas skipped over). */
+function indexAfterDigits(grouped: string, count: number): number {
+  if (count <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < grouped.length; i++) {
+    if (/\d/.test(grouped[i]) && ++seen === count) return i + 1;
+  }
+  return grouped.length;
+}
+
+type Deletion = "backward" | "forward" | null;
+
 /**
  * Money mask for the Amount field: once any digit is typed the value always
- * reads as `<whole>.<cents>` ("1" -> "1.00"), and the returned caret keeps
- * typing where the user expects it:
+ * reads as `<whole>.<cents>` with the whole part comma-grouped
+ * ("1" -> "1.00", "2131" -> "2,131.00"), and the returned caret keeps typing
+ * where the user expects it:
  *   - digits typed in the whole part stay before the point ("12|.00")
  *   - typing "." jumps into the cents
- *   - digits typed in the cents overwrite the zeros ("12.|00" + 5 -> "12.5|0")
+ *   - digits typed in the decimals replace the padding zeros ("12.|00" + 5 -> "12.5|0"),
+ *     and more than two decimals can be typed ("12.579"); ".00" is only the minimum
  *   - backspacing the point just steps over it; clearing every whole digit
  *     (with zero cents) empties the field so the placeholder shows again
+ *   - backspacing/deleting a comma removes the digit beside it instead,
+ *     since the comma itself would only be re-inserted
  * `raw`/`caret` are the input's value and cursor right after the keystroke;
- * `previous` is the value before it.
+ * `previous` is the value before it, and `deletion` says whether the
+ * keystroke was Backspace or Delete.
  */
-function maskAmount(raw: string, caret: number, previous: string): { value: string; caret: number } {
+function maskAmount(
+  rawInput: string,
+  caretInput: number,
+  previous: string,
+  deletion: Deletion,
+): { value: string; caret: number } {
+  let raw = rawInput;
+  let caret = caretInput;
+
+  // A comma was the only thing removed: delete the digit next to it instead.
+  if (
+    deletion &&
+    previous[caret] === "," &&
+    raw === previous.slice(0, caret) + previous.slice(caret + 1)
+  ) {
+    if (deletion === "backward" && caret > 0) {
+      raw = raw.slice(0, caret - 1) + raw.slice(caret);
+      caret -= 1;
+    } else if (deletion === "forward") {
+      raw = raw.slice(0, caret) + raw.slice(caret + 1);
+    }
+  }
+
   // Backspace/Delete removed only the decimal point: keep the value, step over it.
   if (previous.includes(".") && raw === previous.replace(".", "")) {
     return { value: previous, caret: previous.indexOf(".") };
@@ -100,10 +145,14 @@ function maskAmount(raw: string, caret: number, previous: string): { value: stri
   if (!whole && !/[1-9]/.test(cents)) {
     return { value: "", caret: 0 };
   }
-  if (cents.length > 2) {
-    // Overtype: the new digit replaces the one after it instead of pushing it along.
-    const at = caretInWhole ? 0 : digitsBeforeCaret;
-    cents = (cents.slice(0, at) + cents.slice(at + cents.length - 2)).slice(0, 2);
+  // Decimals are unlimited, but always at least two. Trailing zeros after
+  // the cursor are only padding, so a digit typed in the decimals replaces
+  // them ("12.|00" + 5 -> "12.5|0", then 7 -> "12.57|", then 9 -> "12.579|")
+  // rather than pushing them along ("12.5700").
+  if (!caretInWhole) {
+    while (cents.length > Math.max(2, digitsBeforeCaret) && cents.endsWith("0")) {
+      cents = cents.slice(0, -1);
+    }
   }
   cents = cents.padEnd(2, "0");
 
@@ -122,12 +171,13 @@ function maskAmount(raw: string, caret: number, previous: string): { value: stri
     return { value: previous, caret: Math.max(0, caret - 1) };
   }
 
-  const value = `${whole}.${cents}`;
+  const groupedWhole = groupThousands(whole);
+  const value = `${groupedWhole}.${cents}`;
   if (!caretInWhole) {
-    return { value, caret: whole.length + 1 + Math.min(digitsBeforeCaret, 2) };
+    return { value, caret: groupedWhole.length + 1 + Math.min(digitsBeforeCaret, cents.length) };
   }
   // A lone "0" whole part: sit after it, so the next digit replaces it ("0" + 3 -> "3").
-  return { value, caret: whole === "0" ? 1 : Math.min(digitsBeforeCaret, whole.length) };
+  return { value, caret: whole === "0" ? 1 : indexAfterDigits(groupedWhole, digitsBeforeCaret) };
 }
 
 /** Strips non-digits, caps at 12 digits, and re-inserts a hyphen every 4 digits. */
@@ -168,9 +218,9 @@ function validate(form: FormState): FieldErrors {
 
   if (!form.amount.trim()) {
     errors.amount = "Amount is required.";
-  } else if (Number.isNaN(Number(form.amount))) {
+  } else if (Number.isNaN(parseAmount(form.amount))) {
     errors.amount = "Amount must be a number.";
-  } else if (Number(form.amount) <= 0) {
+  } else if (parseAmount(form.amount) <= 0) {
     errors.amount = "Amount must be greater than zero.";
   }
 
@@ -250,7 +300,7 @@ export default function AddTransactionModal({ onClose, onSubmit }: AddTransactio
         transactionDate: form.transactionDate,
         accountNumber: form.accountNumber.trim(),
         accountHolderName: form.accountHolderName.trim(),
-        amount: Number(form.amount),
+        amount: parseAmount(form.amount),
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Failed to add transaction. Please try again.");
@@ -368,10 +418,18 @@ export default function AddTransactionModal({ onClose, onSubmit }: AddTransactio
                 inputMode="decimal"
                 value={form.amount}
                 onChange={(event) => {
+                  const { inputType } = event.nativeEvent as InputEvent;
+                  const deletion =
+                    inputType === "deleteContentBackward"
+                      ? "backward"
+                      : inputType === "deleteContentForward"
+                        ? "forward"
+                        : null;
                   const { value, caret } = maskAmount(
                     event.target.value,
                     event.target.selectionStart ?? event.target.value.length,
                     form.amount,
+                    deletion,
                   );
                   pendingAmountCaret.current = caret;
                   updateField("amount", value);

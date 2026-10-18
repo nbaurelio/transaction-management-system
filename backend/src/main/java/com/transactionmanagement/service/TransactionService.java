@@ -105,10 +105,7 @@ public class TransactionService {
                 request.getTransactionDate(),
                 normalizeAccountNumber(request.getAccountNumber()),
                 request.getAccountHolderName().trim(),
-                // Always store two decimal places, matching the sample data
-                // (121 -> 121.00). @Digits on the request already rejects
-                // more than two, so no rounding ever actually happens here.
-                request.getAmount().setScale(2, RoundingMode.HALF_UP),
+                withAtLeastTwoDecimals(request.getAmount()),
                 randomStatus()
         );
 
@@ -119,6 +116,15 @@ public class TransactionService {
         appendLineAtomically(line);
 
         return transaction;
+    }
+
+    /**
+     * Pads to two decimal places to match the sample data (121 -> 121.00,
+     * 12.5 -> 12.50) but never rounds: extra decimals are kept as entered
+     * (12.579 stays 12.579). Padding only adds zeros, so it's always exact.
+     */
+    private BigDecimal withAtLeastTwoDecimals(BigDecimal amount) {
+        return amount.scale() < 2 ? amount.setScale(2, RoundingMode.UNNECESSARY) : amount;
     }
 
     private TransactionStatus randomStatus() {
