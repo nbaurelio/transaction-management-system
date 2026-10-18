@@ -10,18 +10,14 @@ export default function TransactionRecordedPopup({ message, onClose }: Transacti
   const headingId = useId();
   const okButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Move focus into the popup on mount so keyboard/screen-reader users land
-  // on the OK button immediately, instead of focus staying on the (now gone)
-  // Add Transaction button behind it.
+  // Focus OK so Enter/Escape work straight away.
   useEffect(() => {
     okButtonRef.current?.focus();
   }, []);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -31,7 +27,7 @@ export default function TransactionRecordedPopup({ message, onClose }: Transacti
     <div className="recorded-popup-overlay" role="presentation" onClick={onClose}>
       <div
         className="recorded-popup"
-        role="alertdialog" // a dialog whose job is to announce a message, as opposed to role="dialog" for a form/menu
+        role="alertdialog"
         aria-modal="true"
         aria-labelledby={headingId}
         onClick={(event) => event.stopPropagation()}

@@ -18,7 +18,7 @@ This README assumes no prior familiarity with Spring Boot, Maven, React, or Vite
 5. [Running the Application](#running-the-application)
 6. [API Documentation](#api-documentation)
 7. [Data Integrity (ACID on a CSV File)](#data-integrity-acid-on-a-csv-file)
-8. [Dashboard Features](#dashboard-features)
+8. [Features](#features)
 9. [Testing](#testing)
 10. [Troubleshooting](#troubleshooting)
 11. [AI Tool Usage Disclosure](#ai-tool-usage-disclosure)
@@ -46,8 +46,9 @@ transaction-management-system/
 └── frontend/                  React + TypeScript app (Vite)
     ├── src/
     │   ├── api/                Functions that call the backend API
-    │   ├── components/         TransactionTable (sort/filter/pagination), AddTransactionModal, StatusBadge
+    │   ├── components/         UI components (header, table, toolbar, Add Transaction form, popups)
     │   ├── types/               Shared TypeScript types
+    │   ├── utils/               Currency formatting, form input masks, search matching
     │   └── App.tsx               Top-level page
     ├── .env.example
     └── package.json
@@ -164,7 +165,7 @@ Vite will print a local URL, typically:
 ➜  Local:   http://localhost:5173/
 ```
 
-Open that URL in your browser. You should see a "Transactions" table pre-loaded with sample data, and an "Add Transaction" button.
+Open that URL in your browser. You should see an **All transactions** table pre-loaded with the sample data, and a teal **+** button to its right (hover over it to reveal its **Add Transaction** label).
 
 To stop the frontend later, press `Ctrl+C` in this terminal.
 
@@ -229,6 +230,10 @@ Adds a new transaction. The server assigns `status` randomly (`Pending`, `Settle
   "status": "Failed"
 }
 ```
+
+**How values are stored:**
+- `accountNumber` can be sent as `1111-2222-3333` or `111122223333`; it is always stored as `XXXX-XXXX-XXXX`.
+- `amount` is stored with at least two decimal places (`121` becomes `121.00`); extra decimals are kept as sent, never rounded (`12.579` stays `12.579`).
 
 **Validation errors:** `400 Bad Request` if a required field is missing, the amount is zero, negative or has more than 13 digits before the decimal point, the date is in the future, or the body is malformed, e.g.:
 
@@ -300,16 +305,44 @@ If `force(true)` weren't there, a hard kill timed right after the response could
 
 ---
 
-## Dashboard Features
+## Features
 
-On top of the required table and modal, the frontend adds a few client-side-only enhancements (no new API calls — all computed from the same `GET /transactions` response already in memory):
+Everything below runs in the browser on top of the two API endpoints; no extra endpoints are used.
 
-- **Search** — a search box in the top bar finds transactions by account holder name (case-insensitive) or account number (hyphens optional, so `11223456` matches `1122-3456-7890`). A result count appears above the table while a search is active.
-- **Status filter** — a funnel icon beside the "Status" column header opens an All / Pending / Settled / Failed menu, each showing a live count; selecting one narrows the table instantly. A dot on the icon shows when a filter is active.
-- **Sortable columns** — click the "Transaction Date" or "Amount" column header to sort by it; click again to reverse direction (▲/▼ indicates the active sort).
-- **Pagination** — a "Rows per page" dropdown (5 / 10 / 25 / 50, default 10) with Previous/Next controls, so the table stays usable as the CSV grows well past the 12 sample rows.
+### Browsing transactions
 
-Search, filtering, sorting and pagination compose together (e.g. search "john", filter to "Pending", then sort by Amount) and all reset to page 1 whenever the search, filter, sort or page size changes.
+- **Search** — the search box in the header finds transactions by account holder name (case-insensitive) or account number (hyphens optional, so `11223456` matches `1122-3456-7890`). Matching characters are highlighted in the table, and the count beside the heading shows how many match.
+- **Status filter** — the funnel icon beside the **Status** column header opens an All / Pending / Settled / Failed menu with a live count for each. A dot on the icon shows when a filter is active, and the heading changes (e.g. "Failed transactions").
+- **Sorting** — click **Transaction Date** or **Amount** in the table header to sort; click again to reverse (▲/▼ marks the active sort).
+- **Pagination** — a **Rows per page** menu (5 / 10 / 25 / 50, default 10) with **Previous** / **Next**.
+- **Status colors** — each status is a colored pill: Pending (yellow), Settled (green), Failed (red).
+
+Search, filter, sort and pagination work together, and each change returns to page 1. The dropdown menus close on an outside click or **Escape**.
+
+### Adding a transaction
+
+1. Click the **+** button (it expands to **Add Transaction** on hover; on touch screens the label is always shown).
+2. Fill in the form. Fields format themselves as you type:
+   - **Transaction Date** — always shown as `YYYY-MM-DD`; hyphens are added automatically, or pick a date with the calendar button. Future dates are rejected.
+   - **Account Number** — digits only, hyphenated as `1234-5678-9012`.
+   - **Account Holder Name** — letters and spaces only.
+   - **Amount** — `.00` appears as soon as you type a digit, and thousands get commas (`1,234,567.00`). More decimals can be typed if needed.
+3. Click **Add Transaction**. Any problems are shown under the related field.
+4. A **Confirm transaction** summary appears. Click **Confirm and record** to save, or **Back to edit** (or press **Escape**) to change something. Nothing is sent to the server before you confirm.
+5. A popup confirms the transaction and its randomly assigned status. The table then jumps to the page containing the new transaction and briefly highlights it (any search, or a status filter that would hide it, is cleared first).
+
+### Loading and errors
+
+- While transactions load, the table shows shimmering placeholder rows.
+- If the backend can't be reached, a message with a **Retry** button is shown.
+- If saving fails, the error is shown in the form so you can try again.
+
+### Notes on the form inputs
+
+The spec lists a "date input" and a "number input". Two fields deliberately use formatted text inputs instead:
+
+- **Transaction Date** — a browser's built-in date input displays dates in the computer's regional format (e.g. `dd/mm/yyyy`), which a web page can't change. A text input guarantees the required `YYYY-MM-DD` format everywhere; the calendar button still opens the browser's native date picker.
+- **Amount** — a built-in number input can't display thousands separators or keep the cursor in place while formatting. The text input uses a numeric keypad on phones and sends a plain number to the API.
 
 ---
 
@@ -318,9 +351,9 @@ Search, filtering, sorting and pagination compose together (e.g. search "john", 
 ### Option A — Use the UI (recommended)
 
 1. With both servers running, open `http://localhost:5173` in your browser.
-2. Confirm the table shows the 12 pre-loaded sample transactions, with status badges colored yellow (Pending), green (Settled), or red (Failed).
-3. Click **Add Transaction**, fill in the form, and click **Add Transaction** again. Review the summary that appears and click **Confirm and record** (or **Back to edit** to change something).
-4. Confirm the new row appears at the bottom of the table with a randomly assigned status.
+2. Confirm the table shows the 12 pre-loaded sample transactions (10 on the first page; click **Next** for the rest), with status pills colored yellow (Pending), green (Settled) or red (Failed).
+3. Click the **+** button, fill in the form, and click **Add Transaction**. Review the summary that appears and click **Confirm and record** (or **Back to edit** to change something).
+4. Close the confirmation popup. The table jumps to the page with the new transaction and briefly highlights it, showing its randomly assigned status.
 5. Refresh the page — the new transaction should still be there (it's now saved in `backend/data/transactions.csv`).
 6. Open `backend/data/transactions.csv` in a text editor to confirm the row was actually appended to the file.
 
@@ -368,7 +401,8 @@ This project was built with the assistance of **Claude** (Anthropic's AI coding 
 
 - **Scaffolding both projects** — generating the Maven/Spring Boot project structure and the Vite/React/TypeScript project structure.
 - **Backend implementation** — the CSV read/write service (using OpenCSV for RFC-4180-correct parsing/escaping rather than hand-rolled string splitting), the REST controller, request validation, centralized error handling, CORS configuration, and the hand-rolled ACID guarantees described in [Data Integrity](#data-integrity-acid-on-a-csv-file) (in-memory buffering for atomicity, `@Pattern`-based consistency checks, `FileChannel` locking for isolation, `fsync` for durability).
-- **Frontend implementation** — the transaction table, the Add Transaction modal with client-side validation, API client functions with error handling, status-color styling, and the dashboard enhancements described in [Dashboard Features](#dashboard-features) (status filter tabs, sortable columns, pagination).
+- **Frontend implementation** — the transaction table, the Add Transaction form (input formatting, client-side validation and the review step), API client functions with error handling, status-color styling, and the features described in [Features](#features): search with highlighting, the status filter menu, sorting, pagination, the loading placeholder, and bringing a newly added transaction into view.
+- **Design iterations** — refining the layout, typography and colors based on my feedback, then a final code cleanup verified against before/after feature tests and screenshots.
 - **Verification** — running `npm run build` and lint, and driving the running app in a headless browser to confirm the table, error states, and modal all render and behave correctly before considering the frontend done.
 - **This README** — drafted to be followable by someone with no prior Spring Boot or React/Vite experience.
 

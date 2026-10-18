@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+/** Turns errors into {@link ApiError} responses. */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -27,22 +28,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         List<String> details = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
-        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Validation failed", details);
-        return ResponseEntity.badRequest().body(body);
+        return ResponseEntity.badRequest().body(new ApiError(HttpStatus.BAD_REQUEST.value(), "Validation failed", details));
     }
 
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(
             HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), describeParseFailure(ex), List.of());
-        return ResponseEntity.badRequest().body(body);
+        return ResponseEntity.badRequest().body(new ApiError(HttpStatus.BAD_REQUEST.value(), describeParseFailure(ex), List.of()));
     }
 
-    /**
-     * Gives a specific message for the two Consistency-critical fields
-     * (transactionDate, amount) when their JSON value doesn't fit the type
-     * Jackson expects, instead of a generic "malformed body" for everything.
-     */
+    /** Specific message for a bad date or amount; generic otherwise. */
     private String describeParseFailure(HttpMessageNotReadableException ex) {
         if (ex.getCause() instanceof InvalidFormatException ife) {
             if (ife.getTargetType() == LocalDate.class) {
@@ -57,11 +52,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(TransactionStorageException.class)
     public ResponseEntity<ApiError> handleStorageException(TransactionStorageException ex) {
-        ApiError body = new ApiError(
+        return ResponseEntity.internalServerError().body(new ApiError(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Unable to access transaction data: " + ex.getMessage(),
-                List.of()
-        );
-        return ResponseEntity.internalServerError().body(body);
+                List.of()));
     }
 }

@@ -28,26 +28,12 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Reads and writes {@code transactions.csv}. Since a flat file has none of a
- * real database's transactional guarantees, this class enforces them by hand:
- *
+ * Reads and writes transactions.csv safely:
  * <ul>
- *   <li><b>Atomicity</b> — a new row is fully formatted in memory ({@link #toCsvLine})
- *       before anything touches disk, and appended with a single {@code write()}
- *       call ({@link #appendLineAtomically}). A crash before that call leaves the
- *       file untouched; a crash after it either way never leaves a half-written row.</li>
- *   <li><b>Consistency</b> — {@link TransactionRequest}'s bean-validation annotations
- *       (checked before this class is ever called) plus {@link TransactionStatus}
- *       being a closed enum mean only well-formed rows can be written. Reading back
- *       a row that still fails to parse (e.g. a hand-edited CSV) raises a clear
- *       {@link TransactionStorageException} instead of a corrupt in-memory result.</li>
- *   <li><b>Isolation</b> — {@code synchronized} serializes concurrent calls within
- *       this process, and an OS-level {@link FileLock} (exclusive for writes, shared
- *       for reads) does the same across processes, so two simultaneous
- *       "Add Transaction" clicks can never interleave or overwrite each other.</li>
- *   <li><b>Durability</b> — {@link FileChannel#force(boolean)} forces the written
- *       bytes to physical disk before {@link #addTransaction} returns, so a 200
- *       response is only ever sent after the row is actually persisted.</li>
+ *   <li>Atomic: each row is built in memory, then appended in one write.</li>
+ *   <li>Consistent: requests are validated first; unreadable rows raise an error.</li>
+ *   <li>Isolated: {@code synchronized} plus an OS file lock (shared for reads, exclusive for writes).</li>
+ *   <li>Durable: the write is flushed to disk before returning.</li>
  * </ul>
  */
 @Service
@@ -64,28 +50,18 @@ public class TransactionService {
         this.csvPath = Path.of(csvPath);
     }
 
-    /**
-     * Reads every transaction currently stored in the CSV file.
-     */
     public synchronized List<Transaction> getAllTransactions() {
         ensureFileExists();
-
-        String content = readFileWithSharedLock();
         List<Transaction> transactions = new ArrayList<>();
-        try (CSVReader reader = new CSVReader(new StringReader(content))) {
-            String[] row;
-            boolean isHeaderRow = true;
+        try (CSVReader reader = new CSVReader(new StringReader(readFileWithSharedLock()))) {
+            reader.skip(1); // header
             int lineNumber = 1;
+            String[] row;
             while ((row = reader.readNext()) != null) {
                 lineNumber++;
-                if (isHeaderRow) {
-                    isHeaderRow = false;
-                    continue;
+                if (row.length >= 5) {
+                    transactions.add(toTransaction(row, lineNumber));
                 }
-                if (row.length < 5) {
-                    continue;
-                }
-                transactions.add(toTransaction(row, lineNumber));
             }
         } catch (IOException | CsvValidationException e) {
             throw new TransactionStorageException("Failed to parse transactions CSV file", e);
@@ -93,14 +69,9 @@ public class TransactionService {
         return transactions;
     }
 
-    /**
-     * Appends a new transaction to the CSV file with a randomly assigned
-     * status, and returns the stored transaction. See the class Javadoc for
-     * how this satisfies atomicity, isolation and durability.
-     */
+    /** Appends a transaction with a random status and returns it. */
     public synchronized Transaction addTransaction(TransactionRequest request) {
         ensureFileExists();
-
         Transaction transaction = new Transaction(
                 request.getTransactionDate(),
                 normalizeAccountNumber(request.getAccountNumber()),
@@ -108,21 +79,11 @@ public class TransactionService {
                 withAtLeastTwoDecimals(request.getAmount()),
                 randomStatus()
         );
-
-        // Atomicity: the row is fully built in memory before anything is written.
-        String line = toCsvLine(toRow(transaction));
-
-        // Isolation + Atomicity + Durability: single locked write, fsynced to disk.
-        appendLineAtomically(line);
-
+        appendLineAtomically(toCsvLine(toRow(transaction)));
         return transaction;
     }
 
-    /**
-     * Pads to two decimal places to match the sample data (121 -> 121.00,
-     * 12.5 -> 12.50) but never rounds: extra decimals are kept as entered
-     * (12.579 stays 12.579). Padding only adds zeros, so it's always exact.
-     */
+    /** 121 -> 121.00 and 12.5 -> 12.50; extra decimals are kept, never rounded. */
     private BigDecimal withAtLeastTwoDecimals(BigDecimal amount) {
         return amount.scale() < 2 ? amount.setScale(2, RoundingMode.UNNECESSARY) : amount;
     }
@@ -132,25 +93,19 @@ public class TransactionService {
         return statuses[random.nextInt(statuses.length)];
     }
 
-    /**
-     * Client-supplied account numbers may arrive as either "XXXX-XXXX-XXXX" or
-     * 12 raw digits (both accepted by {@code TransactionRequest}'s pattern);
-     * this normalizes either into the canonical hyphenated form so the CSV
-     * never ends up with two different representations of the same shape.
-     */
+    /** "111122223333" or "1111-2222-3333" -> "1111-2222-3333". */
     private String normalizeAccountNumber(String raw) {
-        String digits = raw.replaceAll("\\D", "");
-        return digits.replaceAll("(\\d{4})(?=\\d)", "$1-");
+        return raw.replaceAll("\\D", "").replaceAll("(\\d{4})(?=\\d)", "$1-");
     }
 
     private Transaction toTransaction(String[] row, int lineNumber) {
         try {
-            LocalDate date = LocalDate.parse(row[0].trim());
-            String accountNumber = row[1].trim();
-            String accountHolderName = row[2].trim();
-            BigDecimal amount = new BigDecimal(row[3].trim());
-            TransactionStatus status = TransactionStatus.fromLabel(row[4].trim());
-            return new Transaction(date, accountNumber, accountHolderName, amount, status);
+            return new Transaction(
+                    LocalDate.parse(row[0].trim()),
+                    row[1].trim(),
+                    row[2].trim(),
+                    new BigDecimal(row[3].trim()),
+                    TransactionStatus.fromLabel(row[4].trim()));
         } catch (DateTimeParseException | IllegalArgumentException e) {
             throw new TransactionStorageException(
                     "Malformed transaction data at CSV line " + lineNumber + ": " + e.getMessage(), e);
@@ -167,12 +122,10 @@ public class TransactionService {
         };
     }
 
-    /** Formats a single CSV row as a complete, self-contained string (header included). */
+    /** One CSV line; fields are quoted only when needed, like the sample file. */
     private String toCsvLine(String[] row) {
         StringWriter buffer = new StringWriter();
         try (CSVWriter writer = new CSVWriter(buffer)) {
-            // applyQuotesToAll=false: only quote a field if it actually needs it
-            // (e.g. contains a comma), matching the plain, unquoted sample CSV format.
             writer.writeNext(row, false);
         } catch (IOException e) {
             throw new TransactionStorageException("Failed to format CSV row", e);
@@ -180,51 +133,44 @@ public class TransactionService {
         return buffer.toString();
     }
 
-    /**
-     * Appends an already-fully-formed line to the CSV file under an exclusive
-     * OS-level lock, as one {@code write()} call, then fsyncs before returning.
-     * This is where isolation, atomicity and durability actually happen.
-     */
+    /** Appends a full line under an exclusive lock in one write, then flushes to disk. */
     private void appendLineAtomically(String line) {
-        byte[] bytes = line.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer src = ByteBuffer.wrap(line.getBytes(StandardCharsets.UTF_8));
         try (FileChannel channel = FileChannel.open(
-                csvPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
-            try (FileLock ignored = channel.lock()) {
-                ByteBuffer src = ByteBuffer.wrap(bytes);
-                while (src.hasRemaining()) {
-                    channel.write(src);
-                }
-                channel.force(true);
+                csvPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+             FileLock ignored = channel.lock()) {
+            while (src.hasRemaining()) {
+                channel.write(src);
             }
+            channel.force(true);
         } catch (IOException e) {
             throw new TransactionStorageException("Failed to write transaction to CSV file", e);
         }
     }
 
-    /** Reads the whole file under a shared OS-level lock, so it never sees a write mid-flight. */
+    /** Reads the whole file under a shared lock, so a write is never seen half-done. */
     private String readFileWithSharedLock() {
-        try (FileChannel channel = FileChannel.open(csvPath, StandardOpenOption.READ)) {
-            try (FileLock ignored = channel.lock(0, Long.MAX_VALUE, true)) {
-                ByteBuffer buffer = ByteBuffer.allocate((int) channel.size());
-                while (buffer.hasRemaining() && channel.read(buffer) != -1) {
-                    // keep reading until the buffer is full or EOF
-                }
-                buffer.flip();
-                return StandardCharsets.UTF_8.decode(buffer).toString();
+        try (FileChannel channel = FileChannel.open(csvPath, StandardOpenOption.READ);
+             FileLock ignored = channel.lock(0, Long.MAX_VALUE, true)) {
+            ByteBuffer buffer = ByteBuffer.allocate((int) channel.size());
+            while (buffer.hasRemaining() && channel.read(buffer) != -1) {
+                // read until full or EOF
             }
+            buffer.flip();
+            return StandardCharsets.UTF_8.decode(buffer).toString();
         } catch (IOException e) {
             throw new TransactionStorageException("Failed to read transactions CSV file", e);
         }
     }
 
+    /** Creates the CSV with a header row if it doesn't exist yet. */
     private void ensureFileExists() {
         try {
             if (csvPath.getParent() != null) {
                 Files.createDirectories(csvPath.getParent());
             }
             if (!Files.exists(csvPath)) {
-                String headerLine = toCsvLine(CSV_HEADER);
-                Files.write(csvPath, headerLine.getBytes(StandardCharsets.UTF_8),
+                Files.write(csvPath, toCsvLine(CSV_HEADER).getBytes(StandardCharsets.UTF_8),
                         StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             }
         } catch (IOException e) {

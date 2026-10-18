@@ -11,18 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Payload for POST /transactions. Status is intentionally not part of the
- * request: the server assigns it randomly, per the spec.
- *
- * <p>transactionDate and amount are typed as {@link LocalDate} and
- * {@link BigDecimal} rather than String — Jackson itself rejects anything
- * that isn't strictly {@code YYYY-MM-DD} or a valid decimal number before
- * this object is even constructed, which is a stronger guarantee than a
- * regex could give (it also catches calendar-invalid dates like
- * {@code 2025-02-30}). accountNumber and accountHolderName are plain
- * strings, so they get explicit patterns below. Never trust the client:
- * the frontend already enforces these same shapes, but a direct API call
- * (curl, Postman, etc.) bypasses it entirely, so this is the real gate.
+ * Body of POST /transactions. Status isn't included: the server assigns it.
+ * Date and amount are typed, so malformed values are rejected while parsing.
  */
 public class TransactionRequest {
 
@@ -46,8 +36,7 @@ public class TransactionRequest {
 
     @NotNull(message = "amount is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "amount must be greater than zero")
-    // Caps the whole-number part only (same 13-digit limit as the form);
-    // any number of decimal places is allowed.
+    // Limits whole digits to 13; any number of decimals is allowed.
     @Digits(integer = 13, fraction = Integer.MAX_VALUE, message = "amount must have at most 13 digits before the decimal point")
     private BigDecimal amount;
 

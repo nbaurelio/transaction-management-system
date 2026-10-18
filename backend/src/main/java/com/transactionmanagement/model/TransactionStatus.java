@@ -1,9 +1,6 @@
 package com.transactionmanagement.model;
 
-/**
- * Status of a transaction, as stored in the CSV file (column value matches
- * {@link #label}, not the Java enum constant name).
- */
+/** Transaction status. The label is what's stored in the CSV and sent to clients. */
 public enum TransactionStatus {
     PENDING("Pending"),
     SETTLED("Settled"),

@@ -1,8 +1,7 @@
-// Must match TransactionStatus.getLabel() values on the backend exactly —
-// that's the literal string the API sends over the wire for `status`.
+// Must match the backend's status labels exactly.
 export type TransactionStatus = "Pending" | "Settled" | "Failed";
 
-// "All" isn't a real backend status — it's the UI-only option meaning "don't filter".
+// "All" is UI-only: no filter.
 export type StatusFilter = "All" | TransactionStatus;
 
 export const STATUS_FILTERS: StatusFilter[] = ["All", "Pending", "Settled", "Failed"];
@@ -15,7 +14,7 @@ export interface Transaction {
   status: TransactionStatus;
 }
 
-/** Fields the user supplies via the "Add Transaction" form. Status is assigned by the server. */
+/** Form input for a new transaction; the server assigns the status. */
 export interface NewTransactionInput {
   transactionDate: string;
   accountNumber: string;

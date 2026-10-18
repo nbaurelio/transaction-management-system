@@ -15,13 +15,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // null = popup hidden; a string both shows the popup and supplies its text,
-  // so there's no separate boolean to keep in sync with the message.
+  // Success popup text; null hides it.
   const [recordedMessage, setRecordedMessage] = useState<string | null>(null);
-  // Lives here rather than in the table because the input is in the header.
   const [searchQuery, setSearchQuery] = useState("");
+  // Most recently added transaction; the table jumps to and highlights it.
+  const [lastAdded, setLastAdded] = useState<Transaction | null>(null);
 
-  // Empty deps array: fetch once when the app mounts, not on every re-render.
   useEffect(() => {
     loadTransactions();
   }, []);
@@ -30,8 +29,7 @@ export default function App() {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await fetchTransactions();
-      setTransactions(data);
+      setTransactions(await fetchTransactions());
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Failed to load transactions.");
     } finally {
@@ -39,21 +37,20 @@ export default function App() {
     }
   }
 
-  // Called by AddTransactionModal's onSubmit. If createTransaction throws, this
-  // function throws too — the modal's own try/catch is what shows the error and
-  // keeps the modal open, so there's nothing to catch here.
+  // Errors propagate to the modal, which shows them and stays open.
   async function handleAddTransaction(input: NewTransactionInput) {
     const created = await createTransaction(input);
     setTransactions((previous) => [...previous, created]);
+    setLastAdded(created);
+    setSearchQuery(""); // a search could hide the new row
     setIsModalOpen(false);
     setRecordedMessage(
       `The transaction for ${created.accountHolderName} (${formatCurrency(created.amount)}) has been recorded with status ${created.status}.`,
     );
   }
 
+  // "+" that expands to show its label on hover/focus (see .button--expand).
   const addButton = (
-    // Compact "+" that widens to reveal its label on hover/keyboard focus
-    // (always shown on touch screens) — see .button--expand in App.css.
     <button className="button button--primary button--expand" onClick={() => setIsModalOpen(true)}>
       <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
         <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
@@ -81,7 +78,13 @@ export default function App() {
         )}
 
         {!loading && !loadError && (
-          <TransactionTable transactions={transactions} searchQuery={searchQuery} actions={addButton} />
+          <TransactionTable
+            transactions={transactions}
+            searchQuery={searchQuery}
+            newTransaction={lastAdded}
+            highlightNew={recordedMessage === null}
+            actions={addButton}
+          />
         )}
       </main>
 

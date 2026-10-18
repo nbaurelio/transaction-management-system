@@ -18,11 +18,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Consistency: the API must reject malformed payloads before they ever
- * reach the CSV file. TransactionService is mocked out here — these tests
- * are purely about what the controller lets through.
- */
+/** Invalid payloads must be rejected before reaching the service (mocked here). */
 @WebMvcTest(TransactionController.class)
 class TransactionControllerValidationTest {
 

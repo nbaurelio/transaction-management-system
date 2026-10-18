@@ -4,16 +4,14 @@
   gap: 1rem;
 }
 
-/* Toolbar on its own line above the table: heading + count on the left,
-   Add Transaction on the right (see TableToolbar.tsx). */
+/* Heading + count on the left, Add Transaction on the right. */
 .table-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  /* Extra room on top: the header's logo badge hangs ~26px over the page. */
-  margin-top: 2.75rem;
+  margin-top: 2.75rem; /* clears the header's logo badge */
 }
 
 .table-toolbar-title {
@@ -24,7 +22,6 @@
 }
 
 .section-heading {
-  font-family: var(--font-heading);
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
@@ -32,7 +29,6 @@
   color: var(--text);
 }
 
-/* Record count: a small neutral pill, the same shape as the status pills. */
 .table-count {
   display: inline-block;
   min-width: 1.75rem;
@@ -59,9 +55,7 @@
   background: var(--surface);
 }
 
-/* overflow-x:auto above also clips vertically, so with only a row or two
-   showing, the Status filter menu would be cut off. While it's open, the
-   box grows tall enough to fit the header plus the menu. */
+/* overflow-x also clips vertically: make room for the open Status menu. */
 .transaction-table-scroll:has(.status-filter-popover[open]) {
   min-height: 15rem;
 }
@@ -71,6 +65,72 @@
   border-collapse: collapse;
   background: var(--surface);
 }
+
+.transaction-table th,
+.transaction-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; /* narrow screens scroll instead of wrapping */
+}
+
+.transaction-table th {
+  background: var(--table-head);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.transaction-table .transaction-table-status {
+  text-align: center;
+}
+
+.transaction-table .transaction-table-amount {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.transaction-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+/* Just-added row: teal tint that fades out. */
+.transaction-table tbody tr.transaction-row--new {
+  animation: new-row-fade 3s ease-out;
+}
+
+@keyframes new-row-fade {
+  0%,
+  40% {
+    background: rgba(95, 195, 201, 0.28);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.transaction-table-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* Teal, since yellow means "Pending" in this table. */
+.search-highlight {
+  background: rgba(95, 195, 201, 0.32);
+  color: var(--accent-deep);
+  font-weight: 600;
+  border-radius: 2px;
+  padding: 0.05em 0;
+}
+
+/* Sorting */
 
 .sortable-header {
   font: inherit;
@@ -101,6 +161,110 @@
   color: var(--accent);
   opacity: 1;
 }
+
+/* Status filter */
+
+.status-column-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.status-filter-popover {
+  position: relative;
+  display: inline-flex;
+}
+
+.status-filter-popover summary {
+  list-style: none; /* hide the <details> triangle */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.status-filter-popover summary::-webkit-details-marker {
+  display: none;
+}
+
+.status-filter-popover summary:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.status-filter-popover[open] summary {
+  color: var(--accent);
+}
+
+/* Shows a filter is active while the menu is closed. */
+.status-filter-active-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Dropdown menu, shared with the rows-per-page menu. */
+.status-filter-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 10rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  /* Undo the table header's text styling. */
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.status-filter-option {
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.status-filter-option:hover {
+  background: var(--surface-hover);
+}
+
+.status-filter-option.status-filter-option--active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.status-filter-option-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-filter-option.status-filter-option--active .status-filter-option-count {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Pagination */
 
 .table-pagination {
   display: flex;
@@ -134,7 +298,6 @@
   display: inline-flex;
 }
 
-/* The closed control: looks like the page's other inputs, with a chevron. */
 .page-size-popover summary {
   list-style: none;
   display: inline-flex;
@@ -174,9 +337,7 @@
   color: var(--accent);
 }
 
-/* Same panel and options as the Status filter (.status-filter-menu /
-   .status-filter-option); only the placement differs. It opens upward and
-   left-aligned, since it sits at the very bottom of the page. */
+/* Opens upward and left-aligned: it sits at the bottom of the page. */
 .status-filter-menu.page-size-menu {
   top: auto;
   bottom: calc(100% + 0.4rem);
@@ -189,167 +350,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.transaction-table th,
-.transaction-table td {
-  padding: 0.85rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  /* Keep each value on one line; narrow screens scroll the table sideways
-     instead of breaking account numbers across three lines. */
-  white-space: nowrap;
-}
-
-.transaction-table th {
-  background: var(--table-head);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-
-/* Status column (heading + pills) is centred. */
-.transaction-table .transaction-table-status {
-  text-align: center;
-}
-
-.transaction-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.transaction-table tbody tr:hover {
-  background: var(--surface-hover);
-}
-
-/* Amount column (heading + values) is centred, with fixed-width digits so
-   figures of the same length still line up digit for digit. */
-.transaction-table .transaction-table-amount {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Search matches in the Name / Account Number cells. Teal tint rather than
-   a yellow highlighter, since yellow already means "Pending" in this table. */
-.search-highlight {
-  background: rgba(95, 195, 201, 0.32);
-  color: var(--accent-deep);
-  font-weight: 600;
-  border-radius: 2px;
-  padding: 0.05em 0;
-}
-
-.transaction-table-empty {
-  color: var(--text-muted);
-  text-align: center;
-  padding: 2rem 0;
-}
-
-.status-column-header {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.status-filter-popover {
-  position: relative;
-  display: inline-flex;
-}
-
-/* <details> renders its own disclosure triangle by default — list-style:none
-   (plus the ::-webkit-details-marker rule below, for Chrome/Safari which
-   don't respect list-style on <summary>) replaces it with just the icon. */
-.status-filter-popover summary {
-  list-style: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.3rem;
-  height: 1.3rem;
-  border-radius: 4px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.status-filter-popover summary::-webkit-details-marker {
-  display: none;
-}
-
-.status-filter-popover summary:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-
-.status-filter-popover[open] summary {
-  color: var(--accent);
-}
-
-/* Shown only when the filter isn't "All", so there's still a hint that
-   filtering is active even while the popover itself is closed. */
-.status-filter-active-dot {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.status-filter-menu {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  min-width: 10rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  padding: 0.35rem;
-  display: flex;
-  flex-direction: column;
-  z-index: 20;
-  /* The header's uppercase/letter-spacing/muted-color styling is meant for
-     the "Status" label, not this menu's contents — reset it here. */
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: 400;
-}
-
-.status-filter-option {
-  font: inherit;
-  font-size: 0.85rem;
-  text-align: left;
-  padding: 0.45rem 0.6rem;
-  border: none;
-  border-radius: 3px;
-  background: none;
-  color: var(--text);
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  cursor: pointer;
-}
-
-.status-filter-option:hover {
-  background: var(--surface-hover);
-}
-
-.status-filter-option.status-filter-option--active {
-  background: var(--accent);
-  color: #fff;
-}
-
-.status-filter-option-count {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.status-filter-option.status-filter-option--active .status-filter-option-count {
-  color: rgba(255, 255, 255, 0.85);
-}
-
+/* Phones: no overhanging badge to clear. */
 @media (max-width: 640px) {
-  /* No overhanging badge on phones (it sits inside the header there). */
   .table-toolbar {
     margin-top: 1.5rem;
   }

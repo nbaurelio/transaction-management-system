@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { STATUS_FILTERS, type StatusFilter, type Transaction } from "../types/transaction";
 import { formatCurrency } from "../utils/currency";
+import { accountMatchRanges, matchesSearch, nameMatchRanges, type Range } from "../utils/search";
 import StatusBadge from "./StatusBadge";
 import TableToolbar from "./TableToolbar";
 import "./TransactionTable.css";
@@ -11,61 +12,10 @@ type SortDirection = "asc" | "desc";
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50] as const;
 const DEFAULT_PAGE_SIZE = 10;
 
-/**
- * Case-insensitive match on account holder name, or on account number with
- * hyphens ignored — so "11223456" finds "1122-3456-7890" as well as "1122-34".
- */
-function matchesSearch(transaction: Transaction, query: string): boolean {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return true;
-  if (transaction.accountHolderName.toLowerCase().includes(normalizedQuery)) return true;
-  const queryDigits = normalizedQuery.replace(/-/g, "");
-  return queryDigits !== "" && transaction.accountNumber.replace(/-/g, "").includes(queryDigits);
-}
-
-type Range = [start: number, end: number];
-
-/** Every non-overlapping occurrence of `needle` in `haystack`, as [start, end) ranges. */
-function findOccurrences(haystack: string, needle: string): Range[] {
-  const ranges: Range[] = [];
-  if (!needle) return ranges;
-  let from = 0;
-  let index: number;
-  while ((index = haystack.indexOf(needle, from)) !== -1) {
-    ranges.push([index, index + needle.length]);
-    from = index + needle.length;
-  }
-  return ranges;
-}
-
-/** Where the search matches a name — case-insensitive, same rule as matchesSearch. */
-function nameMatchRanges(name: string, query: string): Range[] {
-  return findOccurrences(name.toLowerCase(), query.trim().toLowerCase());
-}
-
-/**
- * Where the search matches an account number. Matching ignores hyphens
- * (as in matchesSearch), so the search runs on the digits alone and each hit
- * is mapped back onto the formatted number — a range can span a hyphen, e.g.
- * "11223456" highlights "1122-3456" in "1122-3456-7890".
- */
-function accountMatchRanges(accountNumber: string, query: string): Range[] {
-  const queryDigits = query.trim().toLowerCase().replace(/-/g, "");
-  const positions: number[] = []; // index in accountNumber of each non-hyphen char
-  let stripped = "";
-  for (let i = 0; i < accountNumber.length; i++) {
-    if (accountNumber[i] !== "-") {
-      positions.push(i);
-      stripped += accountNumber[i];
-    }
-  }
-  return findOccurrences(stripped, queryDigits).map(([start, end]) => [positions[start], positions[end - 1] + 1]);
-}
-
-/** Renders `text` with each range wrapped in a <mark>. */
+/** Wraps each matched range of `text` in a <mark>. */
 function highlight(text: string, ranges: Range[]) {
   if (ranges.length === 0) return text;
-  const parts = [];
+  const parts: ReactNode[] = [];
   let cursor = 0;
   for (const [start, end] of ranges) {
     if (start > cursor) parts.push(text.slice(cursor, start));
@@ -80,14 +30,30 @@ function highlight(text: string, ranges: Range[]) {
   return parts;
 }
 
+function closePopover(ref: RefObject<HTMLDetailsElement | null>) {
+  if (ref.current) ref.current.open = false;
+}
+
+const optionClass = (active: boolean) => `status-filter-option${active ? " status-filter-option--active" : ""}`;
+
 interface TransactionTableProps {
   transactions: Transaction[];
   searchQuery: string;
-  /** Shown at the right of the toolbar above the table (the Add Transaction button). */
+  /** Just-added transaction: brought into view (page + filter adjusted). */
+  newTransaction?: Transaction | null;
+  /** Start the new row's highlight (false while the success popup covers the table). */
+  highlightNew?: boolean;
+  /** Right side of the toolbar (the Add Transaction button). */
   actions?: ReactNode;
 }
 
-export default function TransactionTable({ transactions, searchQuery, actions }: TransactionTableProps) {
+export default function TransactionTable({
+  transactions,
+  searchQuery,
+  newTransaction,
+  highlightNew = true,
+  actions,
+}: TransactionTableProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -95,16 +61,23 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const filterPopoverRef = useRef<HTMLDetailsElement>(null);
   const pageSizePopoverRef = useRef<HTMLDetailsElement>(null);
+  const newRowRef = useRef<HTMLTableRowElement>(null);
+  // The new transaction already brought into view, so it's only done once.
+  const [shownNew, setShownNew] = useState<Transaction | null>(null);
 
-  // <details> menus only close when their own summary is clicked. Close them
-  // on a click anywhere else, or on Escape, like a typical dropdown.
+  // Scroll the new row into view once its page is showing.
+  useEffect(() => {
+    if (!shownNew) return;
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    newRowRef.current?.scrollIntoView({ block: "nearest", behavior: smooth ? "smooth" : "auto" });
+  }, [shownNew]);
+
+  // Close the dropdown menus on an outside click or Escape.
   useEffect(() => {
     const popovers = [filterPopoverRef, pageSizePopoverRef];
     function closeAll(except?: Node) {
       for (const ref of popovers) {
-        if (ref.current?.open && !(except && ref.current.contains(except))) {
-          ref.current.open = false;
-        }
+        if (ref.current?.open && !(except && ref.current.contains(except))) closePopover(ref);
       }
     }
     function handlePointerDown(event: PointerEvent) {
@@ -121,10 +94,7 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
     };
   }, []);
 
-  // The search box lives in the header, outside this component, so a new
-  // query is noticed here and sends the table back to page 1 — the same as
-  // a filter or sort change. Adjusting state during render (rather than in
-  // an effect) avoids a render showing the stale page first.
+  // A new search goes back to page 1 (set during render to avoid a stale frame).
   const [lastSearchQuery, setLastSearchQuery] = useState(searchQuery);
   if (searchQuery !== lastSearchQuery) {
     setLastSearchQuery(searchQuery);
@@ -140,16 +110,11 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
     );
   }
 
-  // Pipeline: search -> filter by status -> sort -> slice to the current page.
-  // Recomputed from scratch on every render instead of memoized — the
-  // transaction lists here are small, so the simplicity isn't worth the
-  // useMemo bookkeeping.
+  // Search -> status filter -> sort -> page.
+  const trimmedQuery = searchQuery.trim();
   const searched = transactions.filter((t) => matchesSearch(t, searchQuery));
   const filtered = statusFilter === "All" ? searched : searched.filter((t) => t.status === statusFilter);
-  const trimmedQuery = searchQuery.trim();
-
-  // sortField is null until the user clicks a column header, so the default
-  // view keeps the server's original (insertion) order.
+  // Unsorted keeps the server's (insertion) order.
   const sorted = sortField
     ? [...filtered].sort((a, b) => {
         const diff =
@@ -158,17 +123,24 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
       })
     : filtered;
 
-  // currentPage can point past the end after the filter/sort above shrinks
-  // the result set (e.g. switching to a status with fewer rows while on
-  // page 3) — safePage clamps it back into range for this render without
-  // needing an effect to "fix up" the state afterwards.
+  // Bring a just-added transaction into view: clear a filter that hides it,
+  // then go to its page (set during render, like the search reset above).
+  if (newTransaction && newTransaction !== shownNew) {
+    if (statusFilter !== "All" && newTransaction.status !== statusFilter) {
+      setStatusFilter("All");
+    } else {
+      const index = sorted.indexOf(newTransaction);
+      if (index !== -1) setCurrentPage(Math.floor(index / pageSize) + 1);
+      setShownNew(newTransaction);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
+  const safePage = Math.min(currentPage, totalPages); // clamp after the list shrinks
   const paginated = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   function handleSort(field: SortField) {
     if (sortField === field) {
-      // clicking the active column again flips direction, like a typical spreadsheet
       setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
@@ -187,16 +159,9 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
     );
   }
 
-  function selectFilter(filter: StatusFilter) {
-    setStatusFilter(filter);
-    setCurrentPage(1);
-  }
-
-  // Counts follow the search, so the filter menu shows what each option
-  // would actually leave on screen.
-  function countFor(filter: StatusFilter) {
-    return filter === "All" ? searched.length : searched.filter((t) => t.status === filter).length;
-  }
+  // Counts follow the current search.
+  const countFor = (filter: StatusFilter) =>
+    filter === "All" ? searched.length : searched.filter((t) => t.status === filter).length;
 
   return (
     <div className="transaction-table-wrapper">
@@ -246,14 +211,11 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
                           type="button"
                           role="menuitemradio"
                           aria-checked={statusFilter === filter}
-                          className={`status-filter-option${statusFilter === filter ? " status-filter-option--active" : ""}`}
+                          className={optionClass(statusFilter === filter)}
                           onClick={() => {
-                            selectFilter(filter);
-                            // Close the popover after a selection, same as a
-                            // typical menu — <details> otherwise stays open.
-                            if (filterPopoverRef.current) {
-                              filterPopoverRef.current.open = false;
-                            }
+                            setStatusFilter(filter);
+                            setCurrentPage(1);
+                            closePopover(filterPopoverRef);
                           }}
                         >
                           {filter} <span className="status-filter-option-count">{countFor(filter)}</span>
@@ -276,13 +238,14 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
               </tr>
             ) : (
               paginated.map((transaction, localIndex) => {
-                // None of the fields are guaranteed unique on their own (same
-                // account can appear on the same date more than once), so the
-                // row's position in the full sorted/filtered list is folded
-                // into the key as a tiebreaker.
+                // Fields aren't unique on their own, so the row position is part of the key.
                 const globalIndex = (safePage - 1) * pageSize + localIndex;
                 return (
-                  <tr key={`${transaction.accountNumber}-${transaction.transactionDate}-${globalIndex}`}>
+                  <tr
+                    key={`${transaction.accountNumber}-${transaction.transactionDate}-${globalIndex}`}
+                    ref={transaction === newTransaction ? newRowRef : undefined}
+                    className={transaction === newTransaction && highlightNew ? "transaction-row--new" : undefined}
+                  >
                     <td>{transaction.transactionDate}</td>
                     <td>{highlight(transaction.accountNumber, accountMatchRanges(transaction.accountNumber, searchQuery))}</td>
                     <td>
@@ -300,14 +263,9 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
         </table>
       </div>
 
-      {/* Shown whenever there are rows, not only when there's more than one
-          page — otherwise picking a large page size would hide the very
-          dropdown needed to switch back to a smaller one. */}
+      {/* Always shown when there are rows, so a large page size can be changed back. */}
       {sorted.length > 0 && (
         <div className="table-pagination">
-          {/* A custom menu rather than a native <select>, whose open list
-              can't be styled — this reuses the Status filter's menu styles
-              so the two dropdowns match. */}
           <div className="table-page-size">
             <span>Rows per page</span>
             <details className="page-size-popover" ref={pageSizePopoverRef}>
@@ -324,13 +282,11 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
                     type="button"
                     role="menuitemradio"
                     aria-checked={pageSize === size}
-                    className={`status-filter-option${pageSize === size ? " status-filter-option--active" : ""}`}
+                    className={optionClass(pageSize === size)}
                     onClick={() => {
                       setPageSize(size);
                       setCurrentPage(1);
-                      if (pageSizePopoverRef.current) {
-                        pageSizePopoverRef.current.open = false;
-                      }
+                      closePopover(pageSizePopoverRef);
                     }}
                   >
                     {size}

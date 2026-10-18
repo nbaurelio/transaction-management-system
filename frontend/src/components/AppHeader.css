@@ -1,6 +1,4 @@
-/* Brand gradient (from the First Circle banner artwork): bright teal on the
-   left fading into deep teal by the middle, then dark to the right edge.
-   Everything sits on one centre line. */
+/* Teal gradient taken from the First Circle banner artwork. */
 .app-header {
   position: sticky;
   top: 0;
@@ -10,7 +8,7 @@
 }
 
 .app-header-inner {
-  position: relative; /* anchors the overhanging logo badge */
+  position: relative; /* anchors the logo badge */
   max-width: 1040px;
   height: 60px;
   margin: 0 auto;
@@ -26,14 +24,10 @@
   align-items: center;
   gap: 0.7rem;
   min-width: 0;
-  /* Room for the absolutely positioned logo badge (76px) plus a gap. */
-  padding-left: calc(76px + 0.85rem);
+  padding-left: calc(76px + 0.85rem); /* room for the badge */
 }
 
-/* Logo badge: a 76px white circle set low in the bar, so about two-thirds
-   sits in the teal and the rest (26px) hangs over the page. Kept out of the
-   flex flow (absolute), so the bar's height and the title's centring are
-   unaffected; the brand's left padding makes room for it instead. */
+/* 76px logo circle that hangs 26px below the header. */
 .app-header-badge {
   position: absolute;
   left: 1.5rem;
@@ -55,7 +49,6 @@
   object-fit: contain;
 }
 
-/* Title over a smaller, softer "First Circle" line. */
 .app-header-titles {
   display: flex;
   flex-direction: column;
@@ -64,10 +57,8 @@
 }
 
 .app-header-title {
-  font-family: var(--font-heading);
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
   letter-spacing: 0.005em;
   white-space: nowrap;
 }
@@ -83,14 +74,12 @@
 .app-header-tools {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
   flex: 1;
   justify-content: flex-end;
   min-width: 0;
 }
 
-/* See-through on the teal bar; turns solid white while typing so the query
-   reads like any other input on the page. */
+/* See-through on the bar; solid white while typing. */
 .app-header-search {
   position: relative;
   display: flex;
@@ -143,8 +132,7 @@
   color: var(--accent);
 }
 
-/* Replace Chrome's blue clear "×": light on the teal bar, grey once the
-   box turns white while typing. */
+/* Custom clear "×": light on the bar, grey when the box is white. */
 .app-header-search input::-webkit-search-cancel-button {
   -webkit-appearance: none;
   appearance: none;
@@ -159,7 +147,7 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8M10 2l-8 8' stroke='%235f6b75' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
-/* On phones the search drops onto its own full-width row under the brand. */
+/* Phones: search on its own row; badge smaller and inside the header. */
 @media (max-width: 640px) {
   .app-header-inner {
     height: auto;
@@ -168,8 +156,6 @@
     gap: 0.65rem;
   }
 
-  /* The search sits on a second row here, so an overhang would cover it:
-     the badge goes back inline, smaller, fully inside the header. */
   .app-header-brand {
     padding-left: 0;
     gap: 0.6rem;

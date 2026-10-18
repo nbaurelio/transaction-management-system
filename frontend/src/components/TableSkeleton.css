@@ -1,14 +1,12 @@
-/* Same gap below the toolbar as the real table has. */
 .table-skeleton {
   margin-top: 1rem;
 }
 
-/* Placeholder rows keep the real rows' height, so nothing shifts on load. */
+/* Same row height as real rows, so nothing shifts on load. */
 .table-skeleton tbody td {
   height: 3.1rem;
 }
 
-/* A soft highlight sweeps left to right across every bar in step. */
 .skeleton-bar {
   display: inline-block;
   height: 0.7rem;
@@ -19,7 +17,7 @@
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
-/* Same footprint as a status pill. */
+/* Status pill shape. */
 .skeleton-bar--pill {
   width: 4.25rem;
   height: 1.35rem;

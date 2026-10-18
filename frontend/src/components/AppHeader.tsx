@@ -11,9 +11,7 @@ export default function AppHeader({ searchQuery, onSearchChange }: AppHeaderProp
     <header className="app-header">
       <div className="app-header-inner">
         <div className="app-header-brand">
-          {/* Decorative (the name beside it carries the meaning). A white
-              circle badge that hangs partly below the header; the logo file's
-              own white background blends into it. */}
+          {/* Decorative; the title beside it names the app. */}
           <span className="app-header-badge">
             <img className="app-header-mark" src={logoUrl} alt="" width="50" height="50" />
           </span>

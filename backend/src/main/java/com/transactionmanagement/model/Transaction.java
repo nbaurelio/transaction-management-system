@@ -3,19 +3,17 @@ package com.transactionmanagement.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/** One row of the CSV file. Immutable. */
 public class Transaction {
 
-    private LocalDate transactionDate;
-    private String accountNumber;
-    private String accountHolderName;
-    private BigDecimal amount;
-    private TransactionStatus status;
-
-    public Transaction() {
-    }
+    private final LocalDate transactionDate;
+    private final String accountNumber;
+    private final String accountHolderName;
+    private final BigDecimal amount;
+    private final TransactionStatus status;
 
     public Transaction(LocalDate transactionDate, String accountNumber, String accountHolderName,
-                        BigDecimal amount, TransactionStatus status) {
+                       BigDecimal amount, TransactionStatus status) {
         this.transactionDate = transactionDate;
         this.accountNumber = accountNumber;
         this.accountHolderName = accountHolderName;
@@ -27,39 +25,19 @@ public class Transaction {
         return transactionDate;
     }
 
-    public void setTransactionDate(LocalDate transactionDate) {
-        this.transactionDate = transactionDate;
-    }
-
     public String getAccountNumber() {
         return accountNumber;
-    }
-
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
     }
 
     public String getAccountHolderName() {
         return accountHolderName;
     }
 
-    public void setAccountHolderName(String accountHolderName) {
-        this.accountHolderName = accountHolderName;
-    }
-
     public BigDecimal getAmount() {
         return amount;
     }
 
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
     public TransactionStatus getStatus() {
         return status;
-    }
-
-    public void setStatus(TransactionStatus status) {
-        this.status = status;
     }
 }

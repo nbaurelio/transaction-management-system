@@ -19,7 +19,6 @@
 }
 
 .modal h2 {
-  font-family: var(--font-heading);
   margin: 0 0 1.25rem;
   font-size: 1.15rem;
   font-weight: 600;
@@ -51,6 +50,8 @@
 .modal-field input.has-error:focus-visible {
   outline-color: #c0291e;
 }
+
+/* Date: text field + calendar button */
 
 .modal-date-group {
   position: relative;
@@ -84,9 +85,8 @@
   color: var(--accent);
 }
 
-/* Only exists so showPicker() has a native calendar to open — invisible,
-   but still rendered (display:none would make showPicker() throw), and
-   anchored to the bottom-left so the popup appears under the field. */
+/* Hidden native date input, only for its calendar popup.
+   Must stay rendered (not display:none) for showPicker() to work. */
 .modal-date-picker {
   position: absolute;
   left: 0;
@@ -98,6 +98,8 @@
   opacity: 0;
   pointer-events: none;
 }
+
+/* Amount: "$" prefix */
 
 .modal-input-prefix-group {
   position: relative;
@@ -134,7 +136,8 @@
   margin: 0 0 1rem;
 }
 
-/* Review step: a read-only summary of what's about to be recorded. */
+/* Review step */
+
 .modal-review-intro {
   margin: 0 0 1rem;
   font-size: 0.9rem;

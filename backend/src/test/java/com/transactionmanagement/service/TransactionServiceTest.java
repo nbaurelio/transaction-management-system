@@ -98,13 +98,7 @@ class TransactionServiceTest {
                 .containsExactly("First Person", "Second Person");
     }
 
-    /**
-     * Isolation + Atomicity: fire many "Add Transaction" calls at the exact
-     * same moment (a CountDownLatch holds every thread at the start line
-     * until all are ready, then releases them together) and confirm every
-     * single row survives, distinct and uncorrupted — i.e. no lost writes
-     * and no interleaved/torn rows from concurrent appends.
-     */
+    /** 20 threads add at the same moment; every row must survive, intact and distinct. */
     @Test
     void addTransaction_isSafeUnderConcurrentWrites() throws InterruptedException {
         TransactionService service = newService();

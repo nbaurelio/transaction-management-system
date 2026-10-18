@@ -21,18 +21,15 @@
   white-space: nowrap;
 }
 
-/* Expanding icon button: a square "+" at rest that widens to reveal its
-   label on hover or keyboard focus. The label is clipped, not removed, so
-   screen readers still read it. In a right-aligned toolbar the button grows
-   leftward, away from the page edge. */
+/* Square "+" that widens to show its label on hover/focus.
+   The label is clipped, not removed, so screen readers still read it. */
 .button--expand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 2.375rem;
   min-width: 2.375rem;
-  /* (height − 14px icon − 2px border) / 2 per side → a perfect square at rest. */
-  padding: 0 calc((2.375rem - 16px) / 2);
+  padding: 0 calc((2.375rem - 16px) / 2); /* square: (height - icon - border) / 2 */
 }
 
 .button--expand svg {
@@ -56,7 +53,7 @@
   opacity: 1;
 }
 
-/* Touch screens can't hover, so show the label there all the time. */
+/* No hover on touch screens: always show the label. */
 @media (hover: none) {
   .button--expand .button-label {
     max-width: none;

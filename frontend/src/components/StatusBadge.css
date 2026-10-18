@@ -1,7 +1,4 @@
-/* Status pill: fully rounded, a soft tint of the status colour and no
-   border. Colours follow the spec (Pending yellow, Settled green, Failed
-   red), but in muted, earthy shades — sage, ochre and brick — rather than
-   the bright default palette, so they sit calmly in a finance table. */
+/* Muted takes on the spec's colours: Settled green, Pending yellow, Failed red. */
 .status-badge {
   display: inline-block;
   padding: 0.2rem 0.65rem;

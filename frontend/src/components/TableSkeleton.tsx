@@ -2,16 +2,11 @@ import "./TableSkeleton.css";
 
 const SKELETON_ROWS = 6;
 
-// Bar widths per column, varied row to row so the placeholder reads like
-// real data rather than a uniform grid.
+// Varied widths so the placeholder looks like real data.
 const NAME_WIDTHS = ["7.5rem", "6rem", "8.5rem", "6.5rem", "9rem", "7rem"];
 const AMOUNT_WIDTHS = ["4rem", "3.25rem", "4.5rem", "3.75rem", "4.25rem", "3.5rem"];
 
-/**
- * Shown while transactions load: the real table frame and headers, with
- * shimmering placeholder bars where the rows will appear, so the page
- * doesn't jump when the data arrives.
- */
+/** Loading placeholder: the table frame with shimmering bars, so nothing jumps on load. */
 export default function TableSkeleton() {
   return (
     <div className="transaction-table-scroll table-skeleton" aria-busy="true">
