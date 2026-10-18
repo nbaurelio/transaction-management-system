@@ -4,7 +4,7 @@
   gap: 1rem;
 }
 
-/* Toolbar directly above the table: heading + record count on the left,
+/* Toolbar on its own line above the table: heading + count on the left,
    Add Transaction on the right (see TableToolbar.tsx). */
 .table-toolbar {
   display: flex;
@@ -18,33 +18,44 @@
 
 .table-toolbar-title {
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
 }
 
 .section-heading {
   font-family: var(--font-heading);
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 600;
-  letter-spacing: -0.015em; /* Inter is tuned to tighten slightly at larger sizes */
+  letter-spacing: -0.015em;
   color: var(--text);
 }
 
-/* Separated from the heading by a thin rule rather than punctuation. */
+/* Record count: a small neutral pill, the same shape as the status pills. */
+.table-count {
+  display: inline-block;
+  min-width: 1.75rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: #e4e9eb;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .section-heading-meta {
   font-size: 0.875rem;
   color: var(--text-muted);
-  padding-left: 0.75rem;
-  border-left: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .transaction-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 6px;
   background: var(--surface);
 }
 

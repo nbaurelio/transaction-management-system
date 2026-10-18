@@ -134,7 +134,7 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
   if (transactions.length === 0) {
     return (
       <div className="transaction-table-wrapper">
-        <TableToolbar heading="All transactions" meta="0 on record" actions={actions} />
+        <TableToolbar heading="All transactions" count={0} actions={actions} />
         <p className="transaction-table-empty">No transactions yet. Add one to get started.</p>
       </div>
     );
@@ -202,11 +202,8 @@ export default function TransactionTable({ transactions, searchQuery, actions }:
     <div className="transaction-table-wrapper">
       <TableToolbar
         heading={statusFilter === "All" ? "All transactions" : `${statusFilter} transactions`}
-        meta={
-          trimmedQuery
-            ? `${sorted.length} result${sorted.length === 1 ? "" : "s"} for “${trimmedQuery}”`
-            : `${sorted.length} on record`
-        }
+        count={sorted.length}
+        meta={trimmedQuery ? `matching “${trimmedQuery}”` : undefined}
         actions={actions}
       />
 

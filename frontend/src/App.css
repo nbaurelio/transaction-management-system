@@ -21,6 +21,56 @@
   white-space: nowrap;
 }
 
+/* Expanding icon button: a square "+" at rest that widens to reveal its
+   label on hover or keyboard focus. The label is clipped, not removed, so
+   screen readers still read it. In a right-aligned toolbar the button grows
+   leftward, away from the page edge. */
+.button--expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.375rem;
+  min-width: 2.375rem;
+  /* (height − 14px icon − 2px border) / 2 per side → a perfect square at rest. */
+  padding: 0 calc((2.375rem - 16px) / 2);
+}
+
+.button--expand svg {
+  flex-shrink: 0;
+}
+
+.button--expand .button-label {
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition: max-width 0.25s ease, margin-left 0.25s ease, opacity 0.2s ease;
+}
+
+.button--expand:hover .button-label,
+.button--expand:focus-visible .button-label {
+  max-width: 10rem;
+  margin-left: 0.45rem;
+  opacity: 1;
+}
+
+/* Touch screens can't hover, so show the label there all the time. */
+@media (hover: none) {
+  .button--expand .button-label {
+    max-width: none;
+    margin-left: 0.45rem;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button--expand .button-label {
+    transition: none;
+  }
+}
+
 .button--primary {
   background: var(--accent);
   color: #fff;
@@ -51,7 +101,7 @@
   border: 1px solid #f1c7c3;
   border-radius: var(--radius);
   padding: 1rem;
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
