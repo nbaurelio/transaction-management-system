@@ -11,41 +11,30 @@
 
 .recorded-popup {
   background: var(--surface);
-  border-radius: 8px;
-  padding: 1.75rem 1.5rem;
+  border-radius: 6px;
+  /* Thin green rule on top signals success without a decorative icon. */
+  border-top: 3px solid #1b6b32;
+  padding: 1.5rem;
   width: 100%;
-  max-width: 340px;
+  max-width: 400px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.recorded-popup-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background: #1f9254;
-  color: #fff;
-  font-size: 1.3rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.25rem;
 }
 
 .recorded-popup h2 {
-  margin: 0;
-  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
 .recorded-popup p {
-  margin: 0 0 0.75rem;
+  margin: 0 0 1.25rem;
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.recorded-popup-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .recorded-popup .button {

@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -104,7 +105,10 @@ public class TransactionService {
                 request.getTransactionDate(),
                 normalizeAccountNumber(request.getAccountNumber()),
                 request.getAccountHolderName().trim(),
-                request.getAmount(),
+                // Always store two decimal places, matching the sample data
+                // (121 -> 121.00). @Digits on the request already rejects
+                // more than two, so no rounding ever actually happens here.
+                request.getAmount().setScale(2, RoundingMode.HALF_UP),
                 randomStatus()
         );
 

@@ -4,17 +4,45 @@
   gap: 1rem;
 }
 
+.section-heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.section-heading {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.section-heading-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .transaction-table-scroll {
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* overflow-x:auto above also clips vertically, so with only a row or two
+   showing, the Status filter menu would be cut off. While it's open, the
+   box grows tall enough to fit the header plus the menu. */
+.transaction-table-scroll:has(.status-filter-popover[open]) {
+  min-height: 15rem;
 }
 
 .transaction-table {
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .sortable-header {
@@ -50,7 +78,7 @@
 .table-pagination {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
 }
@@ -60,18 +88,46 @@
   color: var(--text-muted);
 }
 
+.table-pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.table-page-size {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.table-page-size select {
+  font: inherit;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
 .transaction-table th,
 .transaction-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  /* Keep each value on one line; narrow screens scroll the table sideways
+     instead of breaking account numbers across three lines. */
+  white-space: nowrap;
 }
 
 .transaction-table th {
-  background: var(--surface-muted);
-  font-size: 0.85rem;
+  background: var(--table-head);
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
@@ -83,7 +139,14 @@
   background: var(--surface-hover);
 }
 
-.transaction-table-amount {
+/* Ledger convention: amounts right-aligned with fixed-width digits, so the
+   decimal points line up down the column. */
+.transaction-table .transaction-table-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-table td {
   font-variant-numeric: tabular-nums;
 }
 
@@ -151,7 +214,7 @@
   min-width: 10rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   padding: 0.35rem;
   display: flex;
@@ -170,7 +233,7 @@
   text-align: left;
   padding: 0.45rem 0.6rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 3px;
   background: none;
   color: var(--text);
   display: flex;

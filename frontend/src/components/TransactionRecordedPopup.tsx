@@ -36,14 +36,13 @@ export default function TransactionRecordedPopup({ message, onClose }: Transacti
         aria-labelledby={headingId}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="recorded-popup-icon" aria-hidden="true">
-          ✓
-        </div>
-        <h2 id={headingId}>Transaction Recorded</h2>
+        <h2 id={headingId}>Transaction recorded</h2>
         <p>{message}</p>
-        <button ref={okButtonRef} type="button" className="button button--primary" onClick={onClose}>
-          OK
-        </button>
+        <div className="recorded-popup-actions">
+          <button ref={okButtonRef} type="button" className="button button--primary" onClick={onClose}>
+            OK
+          </button>
+        </div>
       </div>
     </div>
   );

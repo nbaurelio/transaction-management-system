@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
@@ -56,6 +57,19 @@ class TransactionServiceTest {
         assertThat(stored.getAccountHolderName()).isEqualTo("Test User");
         assertThat(stored.getAmount()).isEqualByComparingTo("42.50");
         assertThat(stored.getStatus()).isEqualTo(created.getStatus());
+    }
+
+    @Test
+    void addTransaction_storesAmountWithTwoDecimalPlaces() throws Exception {
+        TransactionService service = newService();
+        TransactionRequest request = sampleRequest("3333-3333-3333", "Whole Amount");
+        request.setAmount(new BigDecimal("121"));
+
+        Transaction created = service.addTransaction(request);
+
+        assertThat(created.getAmount().toPlainString()).isEqualTo("121.00");
+        assertThat(Files.readString(tempDir.resolve("transactions.csv")))
+                .contains("3333-3333-3333,Whole Amount,121.00,");
     }
 
     @Test

@@ -7,25 +7,55 @@ import "./TransactionTable.css";
 type SortField = "transactionDate" | "amount";
 type SortDirection = "asc" | "desc";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50] as const;
+const DEFAULT_PAGE_SIZE = 10;
 
-export default function TransactionTable({ transactions }: { transactions: Transaction[] }) {
+/**
+ * Case-insensitive match on account holder name, or on account number with
+ * hyphens ignored — so "11223456" finds "1122-3456-7890" as well as "1122-34".
+ */
+function matchesSearch(transaction: Transaction, query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  if (transaction.accountHolderName.toLowerCase().includes(normalizedQuery)) return true;
+  const queryDigits = normalizedQuery.replace(/-/g, "");
+  return queryDigits !== "" && transaction.accountNumber.replace(/-/g, "").includes(queryDigits);
+}
+
+interface TransactionTableProps {
+  transactions: Transaction[];
+  searchQuery: string;
+}
+
+export default function TransactionTable({ transactions, searchQuery }: TransactionTableProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const filterPopoverRef = useRef<HTMLDetailsElement>(null);
+
+  // The search box lives in the header, outside this component, so a new
+  // query is noticed here and sends the table back to page 1 — the same as
+  // a filter or sort change. Adjusting state during render (rather than in
+  // an effect) avoids a render showing the stale page first.
+  const [lastSearchQuery, setLastSearchQuery] = useState(searchQuery);
+  if (searchQuery !== lastSearchQuery) {
+    setLastSearchQuery(searchQuery);
+    setCurrentPage(1);
+  }
 
   if (transactions.length === 0) {
     return <p className="transaction-table-empty">No transactions yet. Add one to get started.</p>;
   }
 
-  // Pipeline: filter by status -> sort -> slice to the current page.
+  // Pipeline: search -> filter by status -> sort -> slice to the current page.
   // Recomputed from scratch on every render instead of memoized — the
   // transaction lists here are small, so the simplicity isn't worth the
   // useMemo bookkeeping.
-  const filtered =
-    statusFilter === "All" ? transactions : transactions.filter((t) => t.status === statusFilter);
+  const searched = transactions.filter((t) => matchesSearch(t, searchQuery));
+  const filtered = statusFilter === "All" ? searched : searched.filter((t) => t.status === statusFilter);
+  const trimmedQuery = searchQuery.trim();
 
   // sortField is null until the user clicks a column header, so the default
   // view keeps the server's original (insertion) order.
@@ -41,9 +71,9 @@ export default function TransactionTable({ transactions }: { transactions: Trans
   // the result set (e.g. switching to a status with fewer rows while on
   // page 3) — safePage clamps it back into range for this render without
   // needing an effect to "fix up" the state afterwards.
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paginated = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   function handleSort(field: SortField) {
     if (sortField === field) {
@@ -66,12 +96,30 @@ export default function TransactionTable({ transactions }: { transactions: Trans
     );
   }
 
+  function selectFilter(filter: StatusFilter) {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  }
+
+  // Counts follow the search, so the filter menu shows what each option
+  // would actually leave on screen.
   function countFor(filter: StatusFilter) {
-    return filter === "All" ? transactions.length : transactions.filter((t) => t.status === filter).length;
+    return filter === "All" ? searched.length : searched.filter((t) => t.status === filter).length;
   }
 
   return (
     <div className="transaction-table-wrapper">
+      <div className="section-heading-row">
+        <h2 className="section-heading">
+          {statusFilter === "All" ? "All transactions" : `${statusFilter} transactions`}
+        </h2>
+        {trimmedQuery && (
+          <span className="section-heading-meta">
+            {sorted.length} result{sorted.length === 1 ? "" : "s"} for “{trimmedQuery}”
+          </span>
+        )}
+      </div>
+
       <div className="transaction-table-scroll">
         <table className="transaction-table">
           <thead>
@@ -83,20 +131,12 @@ export default function TransactionTable({ transactions }: { transactions: Trans
               </th>
               <th>Account Number</th>
               <th>Account Holder Name</th>
-              <th>
+              <th className="transaction-table-amount">
                 <button type="button" className="sortable-header" onClick={() => handleSort("amount")}>
                   Amount {sortIndicator("amount")}
                 </button>
               </th>
               <th>
-                {/* position:absolute inside this <th> would normally risk
-                    getting clipped — .transaction-table-scroll below sets
-                    overflow-x:auto, and most browsers compute overflow-y as
-                    auto too in that case (clipping both axes), even though
-                    only overflow-x was set explicitly. Verified in-browser
-                    that it renders uncropped regardless; if that ever
-                    changes, the fix is position:fixed computed from the
-                    icon's bounding rect instead of position:absolute. */}
                 <div className="status-column-header">
                   <span>Status</span>
                   <details className="status-filter-popover" ref={filterPopoverRef}>
@@ -121,8 +161,7 @@ export default function TransactionTable({ transactions }: { transactions: Trans
                           aria-checked={statusFilter === filter}
                           className={`status-filter-option${statusFilter === filter ? " status-filter-option--active" : ""}`}
                           onClick={() => {
-                            setStatusFilter(filter);
-                            setCurrentPage(1);
+                            selectFilter(filter);
                             // Close the popover after a selection, same as a
                             // typical menu — <details> otherwise stays open.
                             if (filterPopoverRef.current) {
@@ -143,7 +182,9 @@ export default function TransactionTable({ transactions }: { transactions: Trans
             {sorted.length === 0 ? (
               <tr>
                 <td colSpan={5} className="transaction-table-empty">
-                  No {statusFilter.toLowerCase()} transactions.
+                  {trimmedQuery
+                    ? `No ${statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}transactions match “${trimmedQuery}”.`
+                    : `No ${statusFilter.toLowerCase()} transactions.`}
                 </td>
               </tr>
             ) : (
@@ -152,7 +193,7 @@ export default function TransactionTable({ transactions }: { transactions: Trans
                 // account can appear on the same date more than once), so the
                 // row's position in the full sorted/filtered list is folded
                 // into the key as a tiebreaker.
-                const globalIndex = (safePage - 1) * PAGE_SIZE + localIndex;
+                const globalIndex = (safePage - 1) * pageSize + localIndex;
                 return (
                   <tr key={`${transaction.accountNumber}-${transaction.transactionDate}-${globalIndex}`}>
                     <td>{transaction.transactionDate}</td>
@@ -170,27 +211,51 @@ export default function TransactionTable({ transactions }: { transactions: Trans
         </table>
       </div>
 
-      {totalPages > 1 && (
+      {/* Shown whenever there are rows, not only when there's more than one
+          page — otherwise picking a large page size would hide the very
+          dropdown needed to switch back to a smaller one. */}
+      {sorted.length > 0 && (
         <div className="table-pagination">
-          <button
-            type="button"
-            className="button button--secondary"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={safePage === 1}
-          >
-            Previous
-          </button>
-          <span className="table-pagination-label">
-            Page {safePage} of {totalPages}
-          </span>
-          <button
-            type="button"
-            className="button button--secondary"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage === totalPages}
-          >
-            Next
-          </button>
+          <label className="table-page-size">
+            Rows per page
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {totalPages > 1 && (
+            <div className="table-pagination-nav">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+                disabled={safePage === 1}
+              >
+                Previous
+              </button>
+              <span className="table-pagination-label">
+                Page {safePage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+                disabled={safePage === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

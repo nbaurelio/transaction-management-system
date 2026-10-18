@@ -1,24 +1,30 @@
+/* Squared label with a thin border rather than a soft pill — reads as a
+   status field, not a tag. Colors stay on the spec's yellow/green/red. */
 .status-badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: center;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .status-badge--pending {
-  background-color: #fff6da;
-  color: #8a6d00;
+  background-color: #fdf6dc;
+  border-color: #ecd98a;
+  color: #7a5c00;
 }
 
 .status-badge--settled {
-  background-color: #e3f7e8;
-  color: #1e7a34;
+  background-color: #e6f4ea;
+  border-color: #a9d5b5;
+  color: #1b6b32;
 }
 
 .status-badge--failed {
-  background-color: #fde8e8;
-  color: #c0291e;
+  background-color: #fbeaea;
+  border-color: #eab3ae;
+  color: #a12a20;
 }

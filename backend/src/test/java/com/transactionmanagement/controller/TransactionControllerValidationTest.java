@@ -68,6 +68,13 @@ class TransactionControllerValidationTest {
     }
 
     @Test
+    void rejectsAmountWithMoreThanTwoDecimals() throws Exception {
+        performPost("""
+                {"transactionDate":"2025-03-15","accountNumber":"1234-5678-9012","accountHolderName":"Jane Doe","amount":10.999}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void rejectsFutureDate() throws Exception {
         String tomorrow = LocalDate.now().plusDays(1).toString();
         performPost("""

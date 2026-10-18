@@ -11,7 +11,7 @@
 
 .modal {
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 1.5rem;
   width: 100%;
   max-width: 420px;
@@ -19,7 +19,9 @@
 }
 
 .modal h2 {
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
 .modal-field {
@@ -27,7 +29,7 @@
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 1rem;
 }
 
@@ -36,7 +38,7 @@
   font-weight: 400;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface);
   color: inherit;
 }
@@ -47,6 +49,54 @@
 
 .modal-field input.has-error:focus-visible {
   outline-color: #c0291e;
+}
+
+.modal-date-group {
+  position: relative;
+  display: flex;
+}
+
+.modal-date-group input[type="text"] {
+  width: 100%;
+  padding-right: 2.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-date-trigger {
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+}
+
+.modal-date-trigger:hover {
+  background: var(--surface-hover);
+  color: var(--accent);
+}
+
+/* Only exists so showPicker() has a native calendar to open — invisible,
+   but still rendered (display:none would make showPicker() throw), and
+   anchored to the bottom-left so the popup appears under the field. */
+.modal-date-picker {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .modal-input-prefix-group {
@@ -77,7 +127,7 @@
 .modal-error {
   color: #c0291e;
   background: #fde8e8;
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 0.6rem 0.75rem;
   font-size: 0.85rem;
   font-weight: 500;

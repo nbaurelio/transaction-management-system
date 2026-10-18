@@ -230,7 +230,7 @@ Adds a new transaction. The server assigns `status` randomly (`Pending`, `Settle
 }
 ```
 
-**Validation errors:** `400 Bad Request` if a required field is missing, the amount is zero or negative, the date is in the future, or the body is malformed, e.g.:
+**Validation errors:** `400 Bad Request` if a required field is missing, the amount is zero, negative or has more than 2 decimal places, the date is in the future, or the body is malformed, e.g.:
 
 ```json
 {
@@ -304,11 +304,12 @@ If `force(true)` weren't there, a hard kill timed right after the response could
 
 On top of the required table and modal, the frontend adds a few client-side-only enhancements (no new API calls — all computed from the same `GET /transactions` response already in memory):
 
-- **Status filter tabs** — All / Pending / Settled / Failed, each showing a live count; selecting one narrows the table instantly.
+- **Search** — a search box in the top bar finds transactions by account holder name (case-insensitive) or account number (hyphens optional, so `11223456` matches `1122-3456-7890`). A result count appears above the table while a search is active.
+- **Status filter** — a funnel icon beside the "Status" column header opens an All / Pending / Settled / Failed menu, each showing a live count; selecting one narrows the table instantly. A dot on the icon shows when a filter is active.
 - **Sortable columns** — click the "Transaction Date" or "Amount" column header to sort by it; click again to reverse direction (▲/▼ indicates the active sort).
-- **Pagination** — 10 rows per page, with Previous/Next controls, so the table stays usable as the CSV grows well past the 12 sample rows.
+- **Pagination** — a "Rows per page" dropdown (5 / 10 / 25 / 50, default 10) with Previous/Next controls, so the table stays usable as the CSV grows well past the 12 sample rows.
 
-Filtering, sorting and pagination compose together (e.g. filter to "Failed", then sort by Amount) and all reset to page 1 whenever the filter or sort changes.
+Search, filtering, sorting and pagination compose together (e.g. search "john", filter to "Pending", then sort by Amount) and all reset to page 1 whenever the search, filter, sort or page size changes.
 
 ---
 
@@ -344,7 +345,7 @@ cd backend
 mvn test
 ```
 
-15 tests total: CSV read/write behavior, the concurrent-write safety test described in [Data Integrity](#data-integrity-acid-on-a-csv-file), and controller-level validation tests for every rejected payload shape.
+17 tests total: CSV read/write behavior, the concurrent-write safety test described in [Data Integrity](#data-integrity-acid-on-a-csv-file), and controller-level validation tests for every rejected payload shape.
 
 ---
 

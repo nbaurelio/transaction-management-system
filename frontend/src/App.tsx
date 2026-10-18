@@ -5,6 +5,7 @@ import AppHeader from "./components/AppHeader";
 import TransactionRecordedPopup from "./components/TransactionRecordedPopup";
 import TransactionTable from "./components/TransactionTable";
 import type { NewTransactionInput, Transaction } from "./types/transaction";
+import { formatCurrency } from "./utils/currency";
 import "./App.css";
 
 export default function App() {
@@ -15,6 +16,8 @@ export default function App() {
   // null = popup hidden; a string both shows the popup and supplies its text,
   // so there's no separate boolean to keep in sync with the message.
   const [recordedMessage, setRecordedMessage] = useState<string | null>(null);
+  // Lives here rather than in the table because the input is in the header.
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Empty deps array: fetch once when the app mounts, not on every re-render.
   useEffect(() => {
@@ -42,30 +45,29 @@ export default function App() {
     setTransactions((previous) => [...previous, created]);
     setIsModalOpen(false);
     setRecordedMessage(
-      `Transaction for ${created.accountHolderName} ($${created.amount.toFixed(2)}) was recorded successfully.`,
+      `The transaction for ${created.accountHolderName} (${formatCurrency(created.amount)}) has been recorded with status ${created.status}.`,
     );
   }
 
   return (
     <div className="app">
-      <AppHeader />
+      <AppHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <main className="page">
-        <div className="page-toolbar">
-          <div>
-            <h1>Transactions</h1>
-            {!loading && !loadError && (
-              <p className="page-subtitle">
-                {transactions.length} transaction{transactions.length === 1 ? "" : "s"} on record
-              </p>
-            )}
-          </div>
-
-          <button className="button button--primary" onClick={() => setIsModalOpen(true)}>
-            + Add Transaction
+      <section className="hero">
+        <div className="hero-inner">
+          <h1>Transactions</h1>
+          <p className="hero-subtitle">
+            {!loading && !loadError
+              ? `${transactions.length} transaction${transactions.length === 1 ? "" : "s"} on record`
+              : "Track and record account transactions"}
+          </p>
+          <button className="button button--hero" onClick={() => setIsModalOpen(true)}>
+            Add Transaction
           </button>
         </div>
+      </section>
 
+      <main className="page">
         {loading && <p className="page-status">Loading transactions...</p>}
 
         {!loading && loadError && (
@@ -77,7 +79,7 @@ export default function App() {
           </div>
         )}
 
-        {!loading && !loadError && <TransactionTable transactions={transactions} />}
+        {!loading && !loadError && <TransactionTable transactions={transactions} searchQuery={searchQuery} />}
       </main>
 
       {isModalOpen && (

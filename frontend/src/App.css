@@ -5,41 +5,76 @@
 }
 
 .page {
-  max-width: 960px;
+  max-width: 1040px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 0 1.5rem 4rem;
   flex: 1;
 }
 
-.page-toolbar {
+/* The banner image carries its logo on the right half, so the heading sits
+   on the left over the plain teal area. The gradient overlay keeps white
+   text readable however the image ends up cropped. */
+.hero {
+  background:
+    linear-gradient(90deg, rgba(2, 52, 63, 0.55) 0%, rgba(2, 52, 63, 0) 60%),
+    url("./assets/hero-banner.jpeg") right center / cover no-repeat,
+    var(--accent-deep);
+  color: #fff;
+}
+
+.hero-inner {
+  max-width: 1040px;
+  min-height: 200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
 }
 
-.page-toolbar h1 {
-  font-size: 1.4rem;
+.hero h1 {
   margin: 0;
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
-.page-subtitle {
-  margin: 0.25rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+.hero-subtitle {
+  margin: 0.25rem 0 1.25rem;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* On narrow screens the logo would land behind the heading, so the image is
+   enlarged and anchored left — only its plain teal side stays in view. */
+@media (max-width: 640px) {
+  .hero {
+    background-size: auto, auto 400%;
+    background-position: 0 0, left center;
+  }
+
+  .hero-inner {
+    min-height: 170px;
+    padding: 2rem 1.5rem;
+  }
+
+  .hero h1 {
+    font-size: 1.5rem;
+  }
 }
 
 .page-status {
   color: var(--text-muted);
+  margin-top: 2rem;
 }
 
 .button {
   font: inherit;
-  font-weight: 600;
-  padding: 0.55rem 1.1rem;
-  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -51,6 +86,15 @@
 
 .button--primary:hover:not(:disabled) {
   background: var(--accent-hover);
+}
+
+.button--hero {
+  background: #fff;
+  color: var(--accent-deep);
+}
+
+.button--hero:hover {
+  background: #e9f1f2;
 }
 
 .button--secondary {
@@ -69,10 +113,12 @@
 }
 
 .load-error {
-  background: #fde8e8;
-  color: #c0291e;
-  border-radius: 8px;
+  background: #fdf0ef;
+  color: #a12a20;
+  border: 1px solid #f1c7c3;
+  border-radius: var(--radius);
   padding: 1rem;
+  margin-top: 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
